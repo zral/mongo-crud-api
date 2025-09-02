@@ -11,7 +11,13 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 
 ## 📦 Bulk Data Upload & Processing
 
-### **Overview**   - Use update mode for incremental data loads
+### **Overview**   - U   - Use update mode for incremental data loads
+
+## 🔧 Installation & Development
+
+### **Quick Start with Docker Compose (Recommended)**
+
+```bashte mode for incremental data loads
 
 ## 🔧 Installation & Development
 
