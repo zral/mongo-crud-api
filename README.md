@@ -7,7 +7,18 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 ### **Core Functionality**
 - **Dynamic Collection Exposure**: Automatically exposes all MongoDB collections as REST endpoints
 - **Full CRUD Operations**: Complete Create, Read, Update, Delete operations for each collection
-- **Advanced Filtering**: MongoDB-style query filters with comparison operators, ranges, and regex
+- **Advanced Filtering**: MongoDB-style query filters with c- **Dark/Light Theme**: Theme selection for user preference
+
+## 📦 Bulk Data Upload & Processing
+
+### **Overview**   - Use update mode for incremental data loads
+
+## 🔧 Installation & Development
+
+### **Quick Start with Docker Compose (Recommended)**
+
+```bash
+# Clone and start the applicationk data upload functionality allows you to import large datasets from CSV and Excel files directly into MongoDB collections through both the API and web interface.son operators, ranges, and regex
 - **Auto-Discovery**: New collections are automatically available as endpoints
 - **Management API**: Add and remove collections through REST endpoints
 - **Bulk Data Upload**: Import CSV and Excel files with intelligent data processing and error handling
@@ -61,7 +72,7 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 - **Frontend**: React application with modern UI for data management
 - **Database**: MongoDB with optimized `mongo:7` image
 
-## � SaaS Landing Page
+## 🌐 SaaS Landing Page
 
 A professional marketing landing page is available that positions this solution as **"CrudAPI Pro"** - a compelling SaaS product for developers who need instant backend solutions.
 
@@ -76,7 +87,7 @@ The landing page includes:
 
 Perfect for presenting this solution to stakeholders, investors, or as a foundation for a commercial SaaS offering.
 
-## �🎯 Quick Start
+## 🎯 Quick Start
 
 ```bash
 # Start all services with Docker Compose
