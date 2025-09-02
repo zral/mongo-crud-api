@@ -1,6 +1,23 @@
 # MongoDB CRUD REST API with React Frontend
 
+# MongoDB CRUD REST API with React Frontend
+
 An enterprise-grade Node.js application that dynamically exposes MongoDB collections as REST endpoints with comprehensive CRUD functionality, advanced webhook system, intelligent rate limiting, and a modern React web interface.
+
+## 🚀 Features
+
+### **Core Functionality**
+- **Dynamic Collection Exposure**: Automatically exposes all MongoDB collections as REST endpoints
+- **Full CRUD Operations**: Complete Create, Read, Update, Delete operations for each collection
+- **Advanced Filtering**: MongoDB-style query filters with comparison operators, ranges, and regex
+- **Auto-Discovery**: New collections are automatically available as endpoints
+- **Management API**: Add and remove collections through REST endpoints
+- **Bulk Data Upload**: Import CSV and Excel files with intelligent data processing and error handling
+
+### **Bulk Data Processing**
+- **Multi-Format Support**: CSV (.csv) and Excel (.xlsx, .xls) file uploads
+- **Intelligent Data Processing**: Automatic type detection (numbers, dates, booleans)
+- **Batch Processing**: Configurable batch sizes for large file uploads (up to 10MB)
 
 ## 🚀 Features
 
