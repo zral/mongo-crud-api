@@ -699,7 +699,7 @@ curl -X GET "http://localhost:3003/api/bulk/employees/template?sampleData=true" 
    - Review error reports for data quality issues
    - Use update mode for incremental data loads
 
-## �🔧 Installation & Development
+## 🔧 Installation & Development
 
 ### **Quick Start with Docker Compose (Recommended)**
 
