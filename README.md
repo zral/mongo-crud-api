@@ -34,14 +34,12 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 
 ### **Quick Start with Docker Compose (Recommended)**
 
-```bashte mode for incremental data loads
 
 ## 🔧 Installation & Development
 
 ### **Quick Start with Docker Compose (Recommended)**
 
-```bash
-# Clone and start the applicationk data upload functionality allows you to import large datasets from CSV and Excel files directly into MongoDB collections through both the API and web interface.son operators, ranges, and regex
+Clone and start the applicationk data upload functionality allows you to import large datasets from CSV and Excel files directly into MongoDB collections through both the API and web interface.son operators, ranges, and regex
 - **Auto-Discovery**: New collections are automatically available as endpoints
 - **Management API**: Add and remove collections through REST endpoints
 - **Bulk Data Upload**: Import CSV and Excel files with intelligent data processing and error handling
