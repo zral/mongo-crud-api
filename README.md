@@ -24,33 +24,76 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 ### **Core Functionality**
 - **Dynamic Collection Exposure**: Automatically exposes all MongoDB collections as REST endpoints
 - **Full CRUD Operations**: Complete Create, Read, Update, Delete operations for each collection
-- **Advanced Filtering**: MongoDB-style query filters with c- **Dark/Light Theme**: Theme selection for user preference
-
-## 📦 Bulk Data Upload & Processing
-
-### **Overview**   - U   - Use update mode for incremental data loads
-
-## 🔧 Installation & Development
-
-### **Quick Start with Docker Compose (Recommended)**
-
-
-## 🔧 Installation & Development
-
-### **Quick Start with Docker Compose (Recommended)**
-
-Clone and start the applicationk data upload functionality allows you to import large datasets from CSV and Excel files directly into MongoDB collections through both the API and web interface.son operators, ranges, and regex
+- **Advanced Filtering**: MongoDB-style query filters with comparison operators, ranges, and regex
 - **Auto-Discovery**: New collections are automatically available as endpoints
 - **Management API**: Add and remove collections through REST endpoints
 - **Bulk Data Upload**: Import CSV and Excel files with intelligent data processing and error handling
 
-### **Bulk Data Processing**
-- **Multi-Format Support**: CSV (.csv) and Excel (.xlsx, .xls) file uploads
-- **Intelligent Data Processing**: Automatic type detection (numbers, dates, booleans)
-- **Batch Processing**: Configurable batch sizes for large file uploads (up to 10MB)
-- **Preview Mode**: Preview data before uploading with column mapping
-- **Error Handling**: Detailed error reporting with row-level feedback
-- **Template Generation**: Download CSV templates based on existing collection schemas
+### **Enterprise Webhook System**
+- **Real-time Event Delivery**: HTTP webhooks triggered by database operations (create, update, delete)
+- **Advanced Rate Limiting**: Per-webhook rate limits (1-300 req/min) with sliding window algorithm
+- **Intelligent Retry System**: Exponential backoff retry mechanism with configurable limits
+- **MongoDB-Style Filtering**: Complex document filtering for selective webhook triggering
+- **Comprehensive Management**: Full CRUD operations for webhook configuration
+
+### **SDK Generation & Documentation**
+- **TypeScript SDK Generation**: Auto-generated type-safe client libraries
+- **OpenAPI/Swagger Specification**: Complete API documentation with interactive explorer
+- **Schema Discovery**: Intelligent schema inference from existing data
+- **Multi-Language Support**: Ready for SDK generation in any language supporting OpenAPI
+- **Interactive Documentation**: Swagger UI at `/api/sdk/docs` with live API testing
+
+### **Production Features**
+- **Database Resilience**: Connection retry logic with exponential backoff
+- **Rate Limiting**: Configurable rate limiting to prevent abuse
+- **Health Monitoring**: Continuous connection monitoring and automatic recovery
+- **Security Validation**: Input sanitization and dangerous operator filtering
+- **Error Handling**: Comprehensive error handling with detailed logging
+- **Performance Optimization**: Connection pooling and efficient algorithms
+
+### **Modern Web Interface**
+- **React Frontend**: Modern web interface with responsive design
+- **Real-time Management**: Live webhook and collection management
+- **Bulk Data Upload Interface**: Drag-and-drop file upload with preview functionality
+- **Data Import Wizard**: Step-by-step guide for CSV/Excel imports with validation
+- **Rate Limit Configuration**: Visual rate limit setup with validation
+- **Statistics Dashboard**: Real-time delivery statistics and monitoring
+- **Dark/Light Theme**: Theme selection for user preference
+
+## Components
+
+- **Backend API**: Node.js Express server with MongoDB integration
+- **Frontend**: React application with modern UI for data management
+- **Database**: MongoDB with optimized `mongo:7` image
+
+## 🌐 SaaS Landing Page
+
+A professional marketing landing page is available that positions this solution as **"CrudAPI Pro"** - a compelling SaaS product for developers who need instant backend solutions.
+
+**View the landing page**: [`landing.html`](./landing.html)
+
+The landing page includes:
+- 🎯 **Compelling value proposition**: "Stop Building Backends. Start Building Dreams"
+- 💰 **Professional pricing tiers**: Freemium to Enterprise ($0-$99/month)  
+- 🏆 **Developer testimonials** showcasing time savings and productivity gains
+- ⚡ **Feature highlights** emphasizing speed, ease-of-use, and production readiness
+- 🔗 **Live demo links** connecting directly to your running application
+
+Perfect for presenting this solution to stakeholders, investors, or as a foundation for a commercial SaaS offering.
+
+## 🎯 Quick Start
+
+```bash
+# Start all services with Docker Compose
+docker-compose up -d
+
+# Access the application
+Frontend: http://localhost:3002
+API: http://localhost:3003  
+MongoDB: localhost:27017
+
+# Quick API test
+curl http://localhost:3003/api/management/collections
 - **Update Options**: Configurable upsert behavior for duplicate handling
 
 ### **SDK Generation & Documentation**
@@ -608,7 +651,23 @@ The React frontend provides comprehensive management capabilities with a profess
 ## � Bulk Data Upload & Processing
 
 ### **Overview**
-The bulk data upload functionality allows you to import large datasets from CSV and Excel files directly into MongoDB collections through both the API and web interface.
+The bulk data upload functionality allows you to import large datasets from CSV and Excel files directly into MongoDB collections through both the API and web interface. This powerful feature streamlines data migration, initial database population, and ongoing data synchronization tasks that would otherwise require complex scripting or manual data entry.
+
+**Key Benefits:**
+- **Time Efficiency**: Import thousands of records in seconds instead of manual entry
+- **Data Validation**: Intelligent preview and validation before committing data
+- **Flexible Processing**: Support for both CSV and Excel formats with automatic type detection
+- **Production Ready**: Batch processing with configurable sizes for optimal performance
+- **Error Resilience**: Comprehensive error reporting with row-level feedback for data quality issues
+- **Template Generation**: Auto-generated CSV templates based on existing collection schemas
+- **Update Flexibility**: Configurable upsert behavior for handling duplicate records
+
+**Use Cases:**
+- **Data Migration**: Moving data from legacy systems or other databases
+- **Initial Setup**: Populating new databases with seed data or reference information
+- **Regular Imports**: Scheduled data imports from external systems or data exports
+- **Data Synchronization**: Keeping MongoDB collections in sync with external data sources
+- **Bulk Updates**: Updating multiple records efficiently through file uploads
 
 ### **Supported File Formats**
 - **CSV Files** (.csv): Comma-separated values with automatic delimiter detection
