@@ -1,0 +1,39 @@
+{
+  "name": "mongo-crud-api",
+  "version": "1.0.0",
+  "description": "Dynamic MongoDB CRUD REST API with collection management",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "node test/run-tests.js",
+    "docker:build": "docker build -t mongo-crud-api .",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "dependencies": {
+    "archiver": "^6.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.21.2",
+    "helmet": "^7.0.0",
+    "mongodb": "^6.1.0",
+    "morgan": "^1.10.0",
+    "node-fetch": "^3.3.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "mongodb",
+    "rest-api",
+    "crud",
+    "dynamic",
+    "docker"
+  ],
+  "author": "MongoDB CRUD API",
+  "license": "MIT"
+}

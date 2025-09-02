@@ -1,0 +1,708 @@
+const { MongoClient, ObjectId } = require('mongodb');
+const WebhookDeliveryService = require('./webhookDelivery');
+
+class DatabaseService {
+  constructor() {
+    this.client = null;
+    this.db = null;
+    this.connected = false;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectDelay = 1000; // Start with 1 second
+    this.maxReconnectDelay = 30000; // Max 30 seconds
+    this.connectionMonitorInterval = null;
+    this.webhookDelivery = new WebhookDeliveryService();
+  }
+
+  async connect() {
+    const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/crud_api';
+    const dbName = uri.split('/').pop().split('?')[0] || 'crud_api';
+
+    try {
+      await this.establishConnection(uri, dbName);
+      this.startConnectionMonitoring();
+      return true;
+    } catch (error) {
+      console.error('Initial database connection failed:', error.message);
+      await this.handleConnectionFailure(uri, dbName);
+      return false;
+    }
+  }
+
+  async establishConnection(uri, dbName) {
+    console.log(`Attempting to connect to MongoDB at ${uri}...`);
+    
+    const options = {
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      maxIdleTimeMS: 30000,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      retryWrites: true,
+      retryReads: true
+    };
+
+    this.client = new MongoClient(uri, options);
+    await this.client.connect();
+    
+    // Test the connection
+    await this.client.db(dbName).admin().ping();
+    
+    this.db = this.client.db(dbName);
+    this.connected = true;
+    this.reconnectAttempts = 0;
+    this.reconnectDelay = 1000; // Reset delay
+    
+    console.log(`Successfully connected to MongoDB database: ${dbName}`);
+    
+    // Initialize database indexes
+    await this.initializeDatabase();
+  }
+
+  async handleConnectionFailure(uri, dbName) {
+    this.connected = false;
+    this.reconnectAttempts++;
+
+    if (this.reconnectAttempts > this.maxReconnectAttempts) {
+      console.error(`Failed to connect to MongoDB after ${this.maxReconnectAttempts} attempts. Giving up.`);
+      throw new Error('Database connection failed permanently');
+    }
+
+    const currentDelay = Math.min(
+      this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
+      this.maxReconnectDelay
+    );
+
+    console.log(`Connection attempt ${this.reconnectAttempts} failed. Retrying in ${currentDelay}ms...`);
+    
+    await this.sleep(currentDelay);
+    
+    try {
+      await this.establishConnection(uri, dbName);
+      this.startConnectionMonitoring();
+    } catch (error) {
+      console.error(`Reconnection attempt ${this.reconnectAttempts} failed:`, error.message);
+      await this.handleConnectionFailure(uri, dbName);
+    }
+  }
+
+  startConnectionMonitoring() {
+    if (this.connectionMonitorInterval) {
+      clearInterval(this.connectionMonitorInterval);
+    }
+
+    this.connectionMonitorInterval = setInterval(async () => {
+      try {
+        if (this.client && this.connected) {
+          await this.client.db().admin().ping();
+        }
+      } catch (error) {
+        console.error('Connection monitoring detected failure:', error.message);
+        this.connected = false;
+        
+        const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/crud_api';
+        const dbName = uri.split('/').pop().split('?')[0] || 'crud_api';
+        
+        await this.handleConnectionFailure(uri, dbName);
+      }
+    }, 30000); // Check every 30 seconds
+  }
+
+  async ensureConnection() {
+    if (!this.connected || !this.client) {
+      console.log('Database not connected, attempting to reconnect...');
+      await this.connect();
+    }
+  }
+
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async initializeDatabase() {
+    try {
+      // Create indexes for better performance
+      await this.db.collection('_webhooks').createIndex({ collection: 1, enabled: 1 });
+      await this.db.collection('_webhooks').createIndex({ createdAt: 1 });
+      
+      console.log('Database indexes created successfully');
+    } catch (error) {
+      console.error('Error creating database indexes:', error.message);
+    }
+  }
+
+  async disconnect() {
+    if (this.connectionMonitorInterval) {
+      clearInterval(this.connectionMonitorInterval);
+    }
+    
+    if (this.client) {
+      await this.client.close();
+      this.connected = false;
+      console.log('Disconnected from MongoDB');
+    }
+  }
+
+  isConnected() {
+    return this.connected;
+  }
+
+  getDb() {
+    if (!this.db) {
+      throw new Error('Database not connected');
+    }
+    return this.db;
+  }
+
+  // Enhanced database operations with connection checking and retry logic
+  async executeWithRetry(operation, operationName = 'database operation') {
+    const maxAttempts = 3;
+    let attempt = 1;
+
+    while (attempt <= maxAttempts) {
+      try {
+        await this.ensureConnection();
+        return await operation();
+      } catch (error) {
+        console.error(`${operationName} attempt ${attempt} failed:`, error.message);
+        
+        if (attempt === maxAttempts) {
+          throw error;
+        }
+        
+        // If it's a connection error, try to reconnect
+        if (this.isConnectionError(error)) {
+          this.connected = false;
+          await this.sleep(1000 * attempt); // Progressive delay
+        } else {
+          throw error; // Non-connection errors should be thrown immediately
+        }
+        
+        attempt++;
+      }
+    }
+  }
+
+  isConnectionError(error) {
+    const connectionErrorMessages = [
+      'connection closed',
+      'connection refused',
+      'network error',
+      'timeout',
+      'server selection timed out',
+      'topology was destroyed',
+      'no connection available'
+    ];
+    
+    const errorMessage = error.message.toLowerCase();
+    return connectionErrorMessages.some(msg => errorMessage.includes(msg));
+  }
+
+  // Collection management
+  async listCollections() {
+    try {
+      const collections = await this.db.listCollections().toArray();
+      
+      // Get enhanced statistics for each collection
+      const enhancedCollections = await Promise.all(
+        collections.map(async (col) => {
+          try {
+            const collection = this.db.collection(col.name);
+            
+            // Get document count
+            const documentCount = await collection.countDocuments();
+            
+            // Get last updated timestamp (most recent document update)
+            let lastUpdated = null;
+            try {
+              const lastDocument = await collection
+                .findOne(
+                  {},
+                  {
+                    sort: { updatedAt: -1 },
+                    projection: { updatedAt: 1, createdAt: 1 }
+                  }
+                );
+              
+              if (lastDocument) {
+                lastUpdated = lastDocument.updatedAt || lastDocument.createdAt || null;
+              }
+            } catch (timestampError) {
+              // If updatedAt doesn't exist, try finding the most recent _id (ObjectId contains timestamp)
+              try {
+                const recentDoc = await collection
+                  .findOne({}, { sort: { _id: -1 }, projection: { _id: 1 } });
+                if (recentDoc && recentDoc._id && recentDoc._id.getTimestamp) {
+                  lastUpdated = recentDoc._id.getTimestamp();
+                }
+              } catch (idError) {
+                // Ignore timestamp extraction errors
+              }
+            }
+            
+            return {
+              name: col.name,
+              type: col.type || 'collection',
+              options: col.options || {},
+              stats: {
+                documentCount,
+                lastUpdated: lastUpdated ? lastUpdated.toISOString() : null
+              }
+            };
+          } catch (statError) {
+            console.warn(`Failed to get stats for collection ${col.name}:`, statError.message);
+            return {
+              name: col.name,
+              type: col.type || 'collection',
+              options: col.options || {},
+              stats: {
+                documentCount: 0,
+                lastUpdated: null
+              }
+            };
+          }
+        })
+      );
+      
+      return enhancedCollections;
+    } catch (error) {
+      throw new Error(`Failed to list collections: ${error.message}`);
+    }
+  }
+
+  async createCollection(name) {
+    try {
+      // Check if collection already exists
+      const collections = await this.listCollections();
+      const exists = collections.some(col => col.name === name);
+      
+      if (exists) {
+        throw new Error(`Collection '${name}' already exists`);
+      }
+
+      await this.db.createCollection(name);
+      return { name, created: true };
+    } catch (error) {
+      throw new Error(`Failed to create collection: ${error.message}`);
+    }
+  }
+
+  async dropCollection(name) {
+    try {
+      const collection = this.db.collection(name);
+      const exists = await collection.countDocuments({}, { limit: 1 });
+      
+      if (exists === 0) {
+        // Check if collection exists but is empty
+        const collections = await this.listCollections();
+        const collectionExists = collections.some(col => col.name === name);
+        if (!collectionExists) {
+          throw new Error(`Collection '${name}' does not exist`);
+        }
+      }
+
+      await this.db.dropCollection(name);
+      return { name, dropped: true };
+    } catch (error) {
+      if (error.message.includes('ns not found')) {
+        throw new Error(`Collection '${name}' does not exist`);
+      }
+      throw new Error(`Failed to drop collection: ${error.message}`);
+    }
+  }
+
+  // CRUD operations
+  async findDocuments(collectionName, filter = {}, options = {}) {
+    try {
+      const collection = this.db.collection(collectionName);
+      const { page = 1, limit = 10, sort, fields } = options;
+      
+      // Validate pagination
+      const pageNum = Math.max(1, parseInt(page));
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+      const skip = (pageNum - 1) * limitNum;
+
+      // Build query with projection
+      let query = collection.find(filter);
+      
+      // Apply field projection if specified
+      if (fields && Object.keys(fields).length > 0) {
+        query = query.project(fields);
+      }
+      
+      // Apply pagination
+      query = query.skip(skip).limit(limitNum);
+
+      // Apply sorting
+      if (sort) {
+        const sortObj = {};
+        if (sort.startsWith('-')) {
+          sortObj[sort.substring(1)] = -1;
+        } else {
+          sortObj[sort] = 1;
+        }
+        query = query.sort(sortObj);
+      }
+
+      const documents = await query.toArray();
+      const total = await collection.countDocuments(filter);
+
+      return {
+        data: documents,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum)
+        },
+        filter: filter // Include applied filter in response
+      };
+    } catch (error) {
+      throw new Error(`Failed to find documents: ${error.message}`);
+    }
+  }
+
+  async findDocumentById(collectionName, id) {
+    try {
+      const collection = this.db.collection(collectionName);
+      const objectId = this.toObjectId(id);
+      const document = await collection.findOne({ _id: objectId });
+      
+      if (!document) {
+        throw new Error(`Document with id '${id}' not found`);
+      }
+      
+      return document;
+    } catch (error) {
+      if (error.message.includes('not found')) {
+        throw error;
+      }
+      throw new Error(`Failed to find document: ${error.message}`);
+    }
+  }
+
+  async insertDocument(collectionName, document) {
+    return await this.executeWithRetry(async () => {
+      const collection = this.db.collection(collectionName);
+      
+      // Add timestamp
+      const docWithTimestamp = {
+        ...document,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const result = await collection.insertOne(docWithTimestamp);
+      const insertedDoc = await collection.findOne({ _id: result.insertedId });
+      
+      // Trigger webhooks for create operation
+      setImmediate(() => {
+        this.triggerWebhooksForOperation(collectionName, 'create', insertedDoc);
+      });
+      
+      return insertedDoc;
+    }, 'insert document');
+  }
+
+  async updateDocument(collectionName, id, update) {
+    return await this.executeWithRetry(async () => {
+      const collection = this.db.collection(collectionName);
+      const objectId = this.toObjectId(id);
+      
+      // Get the old document first for webhook
+      const oldDocument = await collection.findOne({ _id: objectId });
+      if (!oldDocument) {
+        throw new Error(`Document with id '${id}' not found`);
+      }
+      
+      // Add timestamp
+      const updateWithTimestamp = {
+        ...update,
+        updatedAt: new Date()
+      };
+
+      const result = await collection.findOneAndUpdate(
+        { _id: objectId },
+        { $set: updateWithTimestamp },
+        { returnDocument: 'after' }
+      );
+
+      if (!result) {
+        throw new Error(`Document with id '${id}' not found`);
+      }
+
+      // Trigger webhooks for update operation
+      setImmediate(() => {
+        this.triggerWebhooksForOperation(collectionName, 'update', result, oldDocument);
+      });
+
+      return result;
+    }, 'update document');
+  }
+
+  async deleteDocument(collectionName, id) {
+    return await this.executeWithRetry(async () => {
+      const collection = this.db.collection(collectionName);
+      const objectId = this.toObjectId(id);
+      
+      const result = await collection.findOneAndDelete({ _id: objectId });
+      
+      if (!result) {
+        throw new Error(`Document with id '${id}' not found`);
+      }
+
+      // Trigger webhooks for delete operation
+      setImmediate(() => {
+        this.triggerWebhooksForOperation(collectionName, 'delete', null, result);
+      });
+
+      return result;
+    }, 'delete document');
+  }
+
+  // Helper methods
+  toObjectId(id) {
+    try {
+      return new ObjectId(id);
+    } catch (error) {
+      throw new Error(`Invalid ObjectId format: ${id}`);
+    }
+  }
+
+  async collectionExists(name) {
+    try {
+      const collections = await this.listCollections();
+      return collections.some(col => col.name === name);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Webhook management methods
+  async getAllWebhooks() {
+    try {
+      const collection = this.db.collection('_webhooks');
+      return await collection.find({}).toArray();
+    } catch (error) {
+      throw new Error(`Failed to fetch webhooks: ${error.message}`);
+    }
+  }
+
+  async createWebhook(webhook) {
+    try {
+      const collection = this.db.collection('_webhooks');
+      const result = await collection.insertOne(webhook);
+      return { ...webhook, _id: result.insertedId };
+    } catch (error) {
+      throw new Error(`Failed to create webhook: ${error.message}`);
+    }
+  }
+
+  async getWebhookById(id) {
+    try {
+      const collection = this.db.collection('_webhooks');
+      const objectId = this.toObjectId(id);
+      return await collection.findOne({ _id: objectId });
+    } catch (error) {
+      throw new Error(`Failed to fetch webhook: ${error.message}`);
+    }
+  }
+
+  async updateWebhook(id, updates) {
+    try {
+      const collection = this.db.collection('_webhooks');
+      const objectId = this.toObjectId(id);
+      
+      const result = await collection.findOneAndUpdate(
+        { _id: objectId },
+        { $set: updates },
+        { returnDocument: 'after' }
+      );
+
+      if (!result) {
+        throw new Error(`Webhook with id '${id}' not found`);
+      }
+
+      return result;
+    } catch (error) {
+      if (error.message.includes('not found')) {
+        throw error;
+      }
+      throw new Error(`Failed to update webhook: ${error.message}`);
+    }
+  }
+
+  async deleteWebhook(id) {
+    try {
+      const collection = this.db.collection('_webhooks');
+      const objectId = this.toObjectId(id);
+      
+      const result = await collection.findOneAndDelete({ _id: objectId });
+      
+      if (!result) {
+        throw new Error(`Webhook with id '${id}' not found`);
+      }
+
+      return result;
+    } catch (error) {
+      if (error.message.includes('not found')) {
+        throw error;
+      }
+      throw new Error(`Failed to delete webhook: ${error.message}`);
+    }
+  }
+
+  async getWebhooksForCollection(collectionName, event) {
+    try {
+      const collection = this.db.collection('_webhooks');
+      return await collection.find({
+        collection: collectionName,
+        events: event,
+        enabled: true
+      }).toArray();
+    } catch (error) {
+      console.error(`Failed to fetch webhooks for collection ${collectionName}:`, error);
+      return [];
+    }
+  }
+
+  matchesFilter(document, filters) {
+    if (!filters || Object.keys(filters).length === 0) {
+      return true; // No filters means match all
+    }
+
+    for (const [field, condition] of Object.entries(filters)) {
+      const value = this.getNestedValue(document, field);
+      
+      if (typeof condition === 'object' && condition !== null) {
+        // Handle operators like $eq, $ne, $gt, $lt, $in, etc.
+        for (const [operator, expectedValue] of Object.entries(condition)) {
+          switch (operator) {
+            case '$eq':
+              if (value !== expectedValue) return false;
+              break;
+            case '$ne':
+              if (value === expectedValue) return false;
+              break;
+            case '$gt':
+              if (value <= expectedValue) return false;
+              break;
+            case '$gte':
+              if (value < expectedValue) return false;
+              break;
+            case '$lt':
+              if (value >= expectedValue) return false;
+              break;
+            case '$lte':
+              if (value > expectedValue) return false;
+              break;
+            case '$in':
+              if (!Array.isArray(expectedValue) || !expectedValue.includes(value)) return false;
+              break;
+            case '$nin':
+              if (Array.isArray(expectedValue) && expectedValue.includes(value)) return false;
+              break;
+            case '$regex':
+              const regex = new RegExp(expectedValue, condition.$options || '');
+              if (!regex.test(String(value))) return false;
+              break;
+            case '$exists':
+              const exists = value !== undefined;
+              if (exists !== expectedValue) return false;
+              break;
+            default:
+              console.warn(`Unknown filter operator: ${operator}`);
+          }
+        }
+      } else {
+        // Direct value comparison
+        if (value !== condition) return false;
+      }
+    }
+    
+    return true;
+  }
+
+  getNestedValue(obj, path) {
+    return path.split('.').reduce((current, key) => {
+      return current && current[key] !== undefined ? current[key] : undefined;
+    }, obj);
+  }
+
+  async triggerWebhook(url, payload) {
+    try {
+      const fetch = (await import('node-fetch')).default;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'MongoCRUD-Webhook/1.0'
+        },
+        body: JSON.stringify(payload),
+        timeout: 10000 // 10 second timeout
+      });
+
+      return {
+        status: response.status,
+        statusText: response.statusText,
+        success: response.ok
+      };
+    } catch (error) {
+      console.error(`Failed to trigger webhook ${url}:`, error);
+      return {
+        status: 0,
+        statusText: error.message,
+        success: false
+      };
+    }
+  }
+
+  async triggerWebhooksForOperation(collectionName, event, document, oldDocument = null) {
+    try {
+      const webhooks = await this.getWebhooksForCollection(collectionName, event);
+      
+      if (webhooks.length === 0) {
+        return;
+      }
+
+      console.log(`Triggering ${webhooks.length} webhooks for ${event} on ${collectionName}`);
+
+      // Use Promise.allSettled to ensure one failed webhook doesn't block others
+      const promises = webhooks.map(async (webhook) => {
+        try {
+          // Check if document matches webhook filters
+          const documentToCheck = event === 'delete' ? oldDocument : document;
+          if (!this.matchesFilter(documentToCheck, webhook.filters)) {
+            console.log(`Document doesn't match filters for webhook ${webhook.name}`);
+            return;
+          }
+
+          const payload = {
+            event,
+            webhook: {
+              id: webhook._id,
+              name: webhook.name
+            },
+            collection: collectionName,
+            timestamp: new Date().toISOString(),
+            data: {
+              document: document,
+              ...(oldDocument && { oldDocument })
+            }
+          };
+
+          // Use the new webhook delivery service with rate limiting and retry
+          await this.webhookDelivery.deliverWebhook(webhook, payload);
+        } catch (error) {
+          console.error(`Failed to trigger webhook ${webhook.name}:`, error.message);
+        }
+      });
+
+      await Promise.allSettled(promises);
+    } catch (error) {
+      console.error(`Failed to trigger webhooks for ${event} on ${collectionName}:`, error.message);
+    }
+  }
+}
+
+module.exports = new DatabaseService();
