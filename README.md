@@ -49,7 +49,22 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 - **Frontend**: React application with modern UI for data management
 - **Database**: MongoDB with optimized `mongo:7` image
 
-## 🎯 Quick Start
+## � SaaS Landing Page
+
+A professional marketing landing page is available that positions this solution as **"CrudAPI Pro"** - a compelling SaaS product for developers who need instant backend solutions.
+
+**View the landing page**: [`landing.html`](./landing.html)
+
+The landing page includes:
+- 🎯 **Compelling value proposition**: "Stop Building Backends. Start Building Dreams"
+- 💰 **Professional pricing tiers**: Freemium to Enterprise ($0-$99/month)
+- 🏆 **Developer testimonials** showcasing time savings and productivity gains
+- ⚡ **Feature highlights** emphasizing speed, ease-of-use, and production readiness
+- 🔗 **Live demo links** connecting directly to your running application
+
+Perfect for presenting this solution to stakeholders, investors, or as a foundation for a commercial SaaS offering.
+
+## �🎯 Quick Start
 
 ```bash
 # Start all services with Docker Compose
@@ -57,14 +72,14 @@ docker-compose up -d
 
 # Access the application
 Frontend: http://localhost:3002
-API: http://localhost:3001  
+API: http://localhost:3003  
 MongoDB: localhost:27017
 
 # Quick API test
-curl http://localhost:3001/api/management/collections
+curl http://localhost:3003/api/management/collections
 
 # Create a webhook with rate limiting
-curl -X POST http://localhost:3001/api/webhooks \
+curl -X POST http://localhost:3003/api/webhooks \
   -H "Content-Type: application/json" \
   -d '{
     "name": "User Events",
@@ -177,7 +192,7 @@ Each webhook supports individual rate limit settings:
 
 ```bash
 # High-volume production webhook
-curl -X POST http://localhost:3001/api/webhooks \
+curl -X POST http://localhost:3003/api/webhooks \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Production Order Processor",
@@ -198,7 +213,7 @@ curl -X POST http://localhost:3001/api/webhooks \
   }'
 
 # User management webhook with email filtering  
-curl -X POST http://localhost:3001/api/webhooks \
+curl -X POST http://localhost:3003/api/webhooks \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Premium User Notifications",
@@ -294,7 +309,7 @@ Webhooks receive rich payloads with complete context:
 
 ```bash
 # Get comprehensive webhook statistics
-curl http://localhost:3001/api/webhooks/stats
+curl http://localhost:3003/api/webhooks/stats
 
 # Response includes:
 {
@@ -366,12 +381,12 @@ Generate production-ready TypeScript client libraries with full type safety:
 
 ```bash
 # Download TypeScript SDK as ZIP file
-curl -X GET "http://localhost:3001/api/sdk/typescript" \
+curl -X GET "http://localhost:3003/api/sdk/typescript" \
   -H "Accept: application/zip" \
   -o "mongodb-crud-sdk.zip"
 
 # Or specify custom package name and API URL
-curl -X GET "http://localhost:3001/api/sdk/typescript?packageName=@myorg/api-client&apiUrl=https://api.production.com" \
+curl -X GET "http://localhost:3003/api/sdk/typescript?packageName=@myorg/api-client&apiUrl=https://api.production.com" \
   -H "Accept: application/zip" \
   -o "custom-sdk.zip"
 ```
@@ -380,7 +395,7 @@ curl -X GET "http://localhost:3001/api/sdk/typescript?packageName=@myorg/api-cli
 
 Access comprehensive Swagger UI documentation at:
 ```
-http://localhost:3001/api/sdk/docs
+http://localhost:3003/api/sdk/docs
 ```
 
 Features:
@@ -395,10 +410,10 @@ Get intelligent schema inference for your collections:
 
 ```bash
 # Get schemas for all collections
-curl http://localhost:3001/api/sdk/schemas
+curl http://localhost:3003/api/sdk/schemas
 
 # Get detailed schema for specific collection
-curl http://localhost:3001/api/sdk/schemas/users
+curl http://localhost:3003/api/sdk/schemas/users
 ```
 
 ### **OpenAPI Specification**
@@ -407,7 +422,7 @@ Download the complete OpenAPI 3.0 specification:
 
 ```bash
 # Get OpenAPI spec
-curl http://localhost:3001/api/sdk/openapi.json
+curl http://localhost:3003/api/sdk/openapi.json
 ```
 
 ### **Using Generated TypeScript SDK**
@@ -416,7 +431,7 @@ curl http://localhost:3001/api/sdk/openapi.json
 import { MongoDBCrudSDK } from '@your-org/mongodb-crud-sdk';
 
 // Initialize SDK
-const sdk = new MongoDBCrudSDK('http://localhost:3001');
+const sdk = new MongoDBCrudSDK('http://localhost:3003');
 
 // Optional: Set authentication token
 sdk.setAuthToken('your-jwt-token');
@@ -468,7 +483,7 @@ docker-compose logs -f
 docker-compose down
 ```
 
-The API will be available at `http://localhost:3001`
+The API will be available at `http://localhost:3003`
 The React Frontend will be available at `http://localhost:3002`
 
 ## 🖥️ React Frontend Features
@@ -532,7 +547,7 @@ docker-compose logs -f
 
 # Access the applications
 # Frontend: http://localhost:3002
-# API: http://localhost:3001
+# API: http://localhost:3003
 # MongoDB: localhost:27017
 ```
 
@@ -571,7 +586,7 @@ cd frontend && npm start
 ```bash
 # .env file settings
 MONGODB_URI=mongodb://localhost:27017/crud_api
-PORT=3001
+PORT=3003
 NODE_ENV=development
 WEBHOOK_TIMEOUT=5000
 RATE_LIMIT_WINDOW_MS=60000
@@ -607,7 +622,7 @@ node test-webhook-rate-limits.js     # Rate limiting tests
 node test-collection-filters.js      # Filter validation tests
 
 # API webhook testing
-curl -X POST http://localhost:3001/api/webhooks/{id}/test
+curl -X POST http://localhost:3003/api/webhooks/{id}/test
 ```
 
 ### **Performance Testing**
@@ -659,7 +674,7 @@ node test/load-test.js
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   React Frontend│    │   Node.js API   │    │   MongoDB 7.0   │
-│   (Port 3002)   │───▶│   (Port 3001)   │───▶│   (Port 27017)  │
+│   (Port 3002)   │───▶│   (Port 3003)   │───▶│   (Port 27017)  │
 │   207MB         │    │   219MB         │    │   1.13GB        │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                │
