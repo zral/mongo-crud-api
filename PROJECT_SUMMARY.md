@@ -9,6 +9,7 @@ This project has successfully implemented a comprehensive Node.js REST API that 
 ### 🏗️ Core Functionality
 - **Dynamic Collection Exposure**: All MongoDB collections automatically available as REST endpoints
 - **Full CRUD Operations**: Create, Read, Update, Delete operations for all collections
+- **Bulk Data Import**: CSV and Excel file upload with intelligent data processing and preview
 - **Management API**: Create and drop collections through REST endpoints  
 - **Auto-Discovery**: New collections immediately accessible without restart
 - **Advanced Filtering**: Webhook-style MongoDB filtering with comprehensive query capabilities
@@ -32,6 +33,8 @@ This project has successfully implemented a comprehensive Node.js REST API that 
 
 ### 🎨 Frontend Interface
 - **React-Based UI**: Modern, responsive web interface
+- **Collection Management**: Complete CRUD operations with bulk upload interface
+- **Bulk Data Upload**: Drag-and-drop CSV/Excel upload with preview and validation
 - **Webhook Management**: Complete webhook CRUD operations
 - **Rate Limit Configuration**: Visual rate limit setup and monitoring
 - **Real-Time Updates**: Live webhook statistics and status monitoring

@@ -10,6 +10,16 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 - **Advanced Filtering**: MongoDB-style query filters with comparison operators, ranges, and regex
 - **Auto-Discovery**: New collections are automatically available as endpoints
 - **Management API**: Add and remove collections through REST endpoints
+- **Bulk Data Upload**: Import CSV and Excel files with intelligent data processing and error handling
+
+### **Bulk Data Processing**
+- **Multi-Format Support**: CSV (.csv) and Excel (.xlsx, .xls) file uploads
+- **Intelligent Data Processing**: Automatic type detection (numbers, dates, booleans)
+- **Batch Processing**: Configurable batch sizes for large file uploads (up to 10MB)
+- **Preview Mode**: Preview data before uploading with column mapping
+- **Error Handling**: Detailed error reporting with row-level feedback
+- **Template Generation**: Download CSV templates based on existing collection schemas
+- **Update Options**: Configurable upsert behavior for duplicate handling
 
 ### **SDK Generation & Documentation**
 - **TypeScript SDK Generation**: Auto-generated type-safe client libraries
@@ -34,6 +44,8 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 ### **Modern Web Interface**
 - **React Frontend**: Modern web interface with responsive design
 - **Real-time Management**: Live webhook and collection management
+- **Bulk Data Upload Interface**: Drag-and-drop file upload with preview functionality
+- **Data Import Wizard**: Step-by-step guide for CSV/Excel imports with validation
 - **Rate Limit Configuration**: Visual rate limit setup with validation
 - **Statistics Dashboard**: Real-time delivery statistics and monitoring
 
@@ -163,6 +175,38 @@ GET    /api/sdk/openapi.json          # Download complete OpenAPI specification
 GET    /api/sdk/typescript            # Generate and download TypeScript SDK (ZIP)
 GET    /api/sdk/docs                  # Interactive Swagger UI documentation
 ```
+
+### **Bulk Data Upload API**
+
+```http
+POST   /api/bulk/{collection}/preview # Preview CSV/Excel file before upload
+POST   /api/bulk/{collection}/upload  # Upload bulk data from CSV/Excel files
+GET    /api/bulk/{collection}/template # Download CSV template for collection
+```
+
+**Bulk Upload Example:**
+```bash
+# Preview a CSV file before uploading
+curl -X POST -F "file=@employees.csv" \
+  -F "previewRows=5" \
+  http://localhost:3003/api/bulk/employees/preview
+
+# Upload CSV with options
+curl -X POST -F "file=@employees.csv" \
+  -F "updateOnDuplicate=true" \
+  -F "batchSize=1000" \
+  http://localhost:3003/api/bulk/employees/upload
+
+# Download template
+curl -X GET "http://localhost:3003/api/bulk/employees/template?sampleData=true" \
+  -o employees_template.csv
+```
+
+**Supported File Formats:**
+- CSV (.csv) - Comma-separated values
+- Excel (.xlsx, .xls) - Microsoft Excel spreadsheets
+- Maximum file size: 10MB
+- Intelligent data type detection (numbers, dates, booleans)
 
 ## 🎣 Enterprise Webhook System
 
@@ -529,7 +573,116 @@ The React frontend provides comprehensive management capabilities with a profess
 - **Keyboard Shortcuts**: Efficient navigation and operation shortcuts
 - **Dark/Light Theme**: Theme selection for user preference
 
-## 🔧 Installation & Development
+## � Bulk Data Upload & Processing
+
+### **Overview**
+The bulk data upload functionality allows you to import large datasets from CSV and Excel files directly into MongoDB collections through both the API and web interface.
+
+### **Supported File Formats**
+- **CSV Files** (.csv): Comma-separated values with automatic delimiter detection
+- **Excel Files** (.xlsx, .xls): Microsoft Excel spreadsheets (first sheet is used)
+- **File Size Limit**: Up to 10MB per upload
+- **Data Types**: Automatic detection of numbers, dates, booleans, and strings
+
+### **Web Interface Usage**
+
+1. **Access Bulk Upload**
+   - Navigate to any collection in the web interface
+   - Click the "Bulk Upload" button (📤 icon)
+   - A modal will open with upload options
+
+2. **File Selection & Preview**
+   - Select your CSV or Excel file
+   - Click "Preview Data" to validate format
+   - Review column mapping and data types
+   - Check total rows and detected columns
+
+3. **Upload Options**
+   - **Update on Duplicate**: Update existing documents with matching keys
+   - **Skip Validation**: Faster uploads with reduced safety checks
+   - **Batch Size**: Configure processing batch size (100-5000, default: 1000)
+
+4. **Template Generation**
+   - Click "Download Template" to get a CSV template
+   - Templates include sample data and proper column headers
+   - Based on existing collection schema or default structure
+
+### **API Usage Examples**
+
+**Preview File Before Upload:**
+```bash
+curl -X POST -F "file=@employees.csv" \
+  -F "previewRows=10" \
+  http://localhost:3003/api/bulk/employees/preview
+```
+
+**Upload with Options:**
+```bash
+curl -X POST -F "file=@employees.csv" \
+  -F "updateOnDuplicate=true" \
+  -F "skipValidation=false" \
+  -F "batchSize=1000" \
+  http://localhost:3003/api/bulk/employees/upload
+```
+
+**Download Template:**
+```bash
+curl -X GET "http://localhost:3003/api/bulk/employees/template?sampleData=true" \
+  -H "Accept: text/csv" \
+  -o employees_template.csv
+```
+
+### **Data Processing Features**
+
+**Intelligent Type Detection:**
+- Numbers: Automatic conversion of numeric strings
+- Dates: ISO format detection (YYYY-MM-DD, etc.)
+- Booleans: "true"/"false", "yes"/"no" conversion
+- Null Values: Empty cells converted to null
+
+**Error Handling:**
+- Row-level error reporting with line numbers
+- Duplicate key detection and handling
+- Validation error details for debugging
+- Partial success with detailed statistics
+
+**Processing Statistics:**
+```json
+{
+  "totalRecords": 1000,
+  "insertedCount": 950,
+  "modifiedCount": 30,
+  "errors": [
+    {
+      "index": 45,
+      "document": {...},
+      "error": "Duplicate key error"
+    }
+  ],
+  "duplicates": [...],
+  "skipped": [...]
+}
+```
+
+### **Best Practices**
+
+1. **File Preparation**
+   - Use clear, descriptive column headers
+   - Ensure consistent data formats within columns
+   - Remove empty rows and unnecessary columns
+   - Validate data before upload
+
+2. **Performance Optimization**
+   - Use appropriate batch sizes (500-2000 for best performance)
+   - Consider skipping validation for trusted data sources
+   - Upload during off-peak hours for large datasets
+
+3. **Error Management**
+   - Always preview data before uploading
+   - Review error reports for data quality issues
+   - Use update mode for incremental data loads
+
+## �🔧 Installation & Development
 
 ### **Quick Start with Docker Compose (Recommended)**
 
