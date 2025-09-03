@@ -13,6 +13,7 @@ const collectionRoutes = require('./routes/collections');
 const managementRoutes = require('./routes/management');
 const webhookRoutes = require('./routes/webhooks');
 const sdkRoutes = require('./routes/sdk');
+const bulkDataRoutes = require('./routes/bulkData');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -38,6 +39,7 @@ app.get('/health', (req, res) => {
 app.use('/api/management', managementRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/sdk', sdkRoutes);
+app.use('/api/bulk', bulkDataRoutes);
 app.use('/api', collectionRoutes);
 
 // 404 handler

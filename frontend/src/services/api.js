@@ -63,6 +63,42 @@ export const apiService = {
   updateWebhook: (id, webhook) => api.put(`/api/webhooks/${id}`, webhook),
   deleteWebhook: (id) => api.delete(`/api/webhooks/${id}`),
   testWebhook: (id) => api.post(`/api/webhooks/${id}/test`),
+
+  // Bulk data operations
+  previewBulkData: (collection, file, previewRows = 10) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('previewRows', previewRows);
+    
+    return api.post(`/api/bulk/${collection}/preview`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  uploadBulkData: (collection, file, options = {}) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Add options to form data
+    Object.entries(options).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+    
+    return api.post(`/api/bulk/${collection}/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  downloadTemplate: (collection, sampleData = false) => {
+    return api.get(`/api/bulk/${collection}/template`, {
+      params: { sampleData },
+      responseType: 'blob',
+    });
+  },
 };
 
 export default api;

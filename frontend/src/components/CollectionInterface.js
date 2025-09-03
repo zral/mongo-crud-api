@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { apiService } from '../services/api';
 import DocumentModal from './DocumentModal';
-import { Eye, Edit, Trash2, Plus, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import BulkUploadInterface from './BulkUploadInterface';
+import { Eye, Edit, Trash2, Plus, RefreshCw, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 
 const CollectionInterface = () => {
   const [collections, setCollections] = useState([]);
@@ -20,6 +21,7 @@ const CollectionInterface = () => {
     mode: 'create', // 'create', 'edit', 'view'
     document: null
   });
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   useEffect(() => {
     loadCollections();
@@ -125,6 +127,22 @@ const CollectionInterface = () => {
     }
   };
 
+  const handleBulkUpload = () => {
+    setShowBulkUpload(true);
+  };
+
+  const handleBulkUploadComplete = (results) => {
+    toast.success(`Bulk upload completed: ${results.insertedCount} inserted, ${results.modifiedCount} modified`);
+    if (results.errors.length > 0) {
+      toast.error(`${results.errors.length} errors occurred during upload`);
+    }
+    loadDocuments(); // Refresh the documents list
+  };
+
+  const handleCloseBulkUpload = () => {
+    setShowBulkUpload(false);
+  };
+
   const handlePageChange = (newPage) => {
     setPagination(prev => ({ ...prev, page: newPage }));
   };
@@ -193,6 +211,13 @@ const CollectionInterface = () => {
                 >
                   <Plus size={16} />
                   Add Document
+                </button>
+                <button
+                  onClick={handleBulkUpload}
+                  className="btn btn-success"
+                >
+                  <Upload size={16} />
+                  Bulk Upload
                 </button>
                 <button
                   onClick={loadDocuments}
@@ -327,6 +352,37 @@ const CollectionInterface = () => {
         onClose={() => setModalConfig({ isOpen: false, mode: 'create', document: null })}
         onSave={handleModalSave}
       />
+
+      {/* Bulk Upload Modal */}
+      {showBulkUpload && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}>
+            <BulkUploadInterface
+              collection={selectedCollection}
+              onUploadComplete={handleBulkUploadComplete}
+              onClose={handleCloseBulkUpload}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
