@@ -59,6 +59,10 @@ class DatabaseService {
     
     // Initialize database indexes
     await this.initializeDatabase();
+    
+    // Set database reference for script execution service and restore scheduled scripts
+    this.scriptExecution.setDatabase(this.db);
+    await this.scriptExecution.restoreScheduledScripts();
   }
 
   async handleConnectionFailure(uri, dbName) {

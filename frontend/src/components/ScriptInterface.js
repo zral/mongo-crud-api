@@ -34,11 +34,6 @@ const ScriptInterface = () => {
       maxRetries: 3,
       baseDelayMs: 1000,
       maxDelayMs: 30000
-    },
-    cronSchedule: {
-      enabled: false,
-      expression: '',
-      payload: '{}'
     }
   });
 
@@ -90,15 +85,24 @@ const ScriptInterface = () => {
           [rateLimitField]: type === 'number' ? parseInt(value) : value
         }
       }));
-    } else if (name === 'events') {
-      const eventsArray = value.split(',').map(e => e.trim()).filter(e => e);
-      setFormData(prev => ({ ...prev, events: eventsArray }));
     } else {
       setFormData(prev => ({
         ...prev,
         [name]: type === 'checkbox' ? checked : value
       }));
     }
+  };
+
+  const handleEventChange = (event) => {
+    const value = event.target.value;
+    const checked = event.target.checked;
+    
+    setFormData(prev => ({
+      ...prev,
+      events: checked 
+        ? [...prev.events, value]
+        : prev.events.filter(e => e !== value)
+    }));
   };
 
   const resetForm = () => {
@@ -115,11 +119,6 @@ const ScriptInterface = () => {
         maxRetries: 3,
         baseDelayMs: 1000,
         maxDelayMs: 30000
-      },
-      cronSchedule: {
-        enabled: false,
-        expression: '',
-        payload: '{}'
       }
     });
     setSelectedScript(null);
@@ -147,32 +146,12 @@ const ScriptInterface = () => {
         }
       }
 
-      // Parse cron payload if provided
-      let cronPayload = {};
-      if (formData.cronSchedule.enabled && formData.cronSchedule.payload.trim()) {
-        try {
-          cronPayload = JSON.parse(formData.cronSchedule.payload);
-        } catch (err) {
-          setError('Invalid JSON in cron payload field');
-          return;
-        }
-      }
-
-      const events = Array.isArray(formData.events) ? formData.events : formData.events.split(',').map(e => e.trim()).filter(e => e);
-      
-      // Add 'cron' to events if cron scheduling is enabled
-      if (formData.cronSchedule.enabled && !events.includes('cron')) {
-        events.push('cron');
-      }
+      const events = formData.events || [];
 
       const scriptData = {
         ...formData,
         filters,
-        events,
-        cronSchedule: formData.cronSchedule.enabled ? {
-          expression: formData.cronSchedule.expression,
-          payload: cronPayload
-        } : null
+        events
       };
 
       if (selectedScript) {
@@ -302,7 +281,8 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
     try {
       setLoading(true);
       const response = await api.get('/api/scripts/scheduled/list');
-      setSchedules(response.data.data?.schedules || []);
+      setSchedules(response.data.data?.scheduledScripts || []);
+      setCronStats(response.data.data?.statistics || {});
     } catch (err) {
       setError(`Failed to load schedules: ${err.message}`);
     } finally {
@@ -311,9 +291,10 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
   };
 
   const loadCronStats = async () => {
+    // Stats are loaded with schedules, no separate call needed
     try {
-      const response = await api.get('/api/scripts/cron/statistics');
-      setCronStats(response.data);
+      const response = await api.get('/api/scripts/scheduled/list');
+      setCronStats(response.data.data?.statistics || {});
     } catch (err) {
       console.error('Failed to load cron stats:', err);
     }
@@ -321,8 +302,8 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
 
   const validateCronExpression = async (expression) => {
     try {
-      const response = await api.get(`/api/scripts/cron/validate/${encodeURIComponent(expression)}`);
-      return response.data;
+      const response = await api.post('/api/scripts/cron/validate', { cronExpression: expression });
+      return response.data.data; // Access the nested data object
     } catch (err) {
       return { valid: false, error: err.response?.data?.message || err.message };
     }
@@ -342,7 +323,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
       // Validate cron expression first
       const validation = await validateCronExpression(scheduleFormData.cronExpression);
       if (!validation.valid) {
-        setError(`Invalid cron expression: ${validation.error}`);
+        setError(`Invalid cron expression: ${validation.error || 'Please check your cron expression format'}`);
         return;
       }
 
@@ -353,7 +334,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
       };
 
       if (selectedSchedule) {
-        await api.put(`/api/scripts/schedule/${selectedSchedule.name}`, scheduleData);
+        await api.put(`/api/scripts/schedule/${selectedSchedule.scriptName || selectedSchedule.name}`, scheduleData);
         setSuccess('Schedule updated successfully!');
       } else {
         await api.post('/api/scripts/schedule', scheduleData);
@@ -373,7 +354,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
   const handleScheduleEdit = (schedule) => {
     setSelectedSchedule(schedule);
     setScheduleFormData({
-      name: schedule.name || '',
+      name: schedule.scriptName || schedule.name || '',
       cronExpression: schedule.cronExpression || '',
       scriptCode: schedule.scriptCode || ''
     });
@@ -404,6 +385,34 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
       await loadCronStats();
     } catch (err) {
       setError(`Failed to trigger schedule: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pauseSchedule = async (scheduleName) => {
+    try {
+      setLoading(true);
+      await api.post(`/api/scripts/schedule/${scheduleName}/pause`);
+      setSuccess(`Schedule "${scheduleName}" paused successfully!`);
+      await loadSchedules();
+      await loadCronStats();
+    } catch (err) {
+      setError(`Failed to pause schedule: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resumeSchedule = async (scheduleName) => {
+    try {
+      setLoading(true);
+      await api.post(`/api/scripts/schedule/${scheduleName}/resume`);
+      setSuccess(`Schedule "${scheduleName}" resumed successfully!`);
+      await loadSchedules();
+      await loadCronStats();
+    } catch (err) {
+      setError(`Failed to resume schedule: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -802,9 +811,9 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                         borderRadius: '3px',
                         border: '1px solid #dee2e6'
                       }}>
-                        <strong>⚡ Rate Limit:</strong> {script.rateLimit.maxExecutionsPerMinute}/min
-                        <span style={{ marginLeft: '12px' }}><strong>Retries:</strong> {script.rateLimit.maxRetries}</span>
-                        <span style={{ marginLeft: '12px' }}><strong>Delay:</strong> {script.rateLimit.baseDelayMs}ms - {script.rateLimit.maxDelayMs}ms</span>
+                        <strong>⚡ Rate Limit:</strong> {script.rateLimit?.maxExecutionsPerMinute || 60}/min
+                        <span style={{ marginLeft: '12px' }}><strong>Retries:</strong> {script.rateLimit?.maxRetries || 3}</span>
+                        <span style={{ marginLeft: '12px' }}><strong>Delay:</strong> {script.rateLimit?.baseDelayMs || 1000}ms - {script.rateLimit?.maxDelayMs || 30000}ms</span>
                       </div>
                     )}
                   </div>
@@ -924,7 +933,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
                       <div>
                         <h4 style={{ margin: '0 0 8px 0', color: '#495057', fontSize: '18px' }}>
-                          {schedule.name}
+                          {schedule.scriptName || schedule.name}
                         </h4>
                         <div style={{ 
                           fontFamily: 'monospace', 
@@ -934,24 +943,37 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                           padding: '4px 8px',
                           borderRadius: '4px',
                           display: 'inline-block',
-                          marginBottom: '8px'
+                          marginBottom: '8px',
+                          marginRight: '8px'
                         }}>
                           {schedule.cronExpression}
+                        </div>
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: schedule.isRunning ? '#28a745' : '#ffc107',
+                          backgroundColor: schedule.isRunning ? '#d4edda' : '#fff3cd',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          display: 'inline-block',
+                          marginBottom: '8px',
+                          fontWeight: 'bold'
+                        }}>
+                          {schedule.isRunning ? '🟢 Active' : '⏸️ Paused'}
                         </div>
                         {schedule.nextRun && (
                           <div style={{ fontSize: '12px', color: '#666' }}>
                             Next run: {new Date(schedule.nextRun).toLocaleString()}
                           </div>
                         )}
-                        {schedule.lastRun && (
+                        {schedule.lastExecution && (
                           <div style={{ fontSize: '12px', color: '#666' }}>
-                            Last run: {new Date(schedule.lastRun).toLocaleString()}
+                            Last run: {new Date(schedule.lastExecution).toLocaleString()}
                           </div>
                         )}
                       </div>
                       <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                         <button
-                          onClick={() => triggerScheduleManually(schedule.name)}
+                          onClick={() => triggerScheduleManually(schedule.scriptName || schedule.name)}
                           style={{
                             padding: '6px 12px',
                             backgroundColor: '#28a745',
@@ -966,6 +988,41 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                         >
                           ▶️ Run
                         </button>
+                        {schedule.isRunning ? (
+                          <button
+                            onClick={() => pauseSchedule(schedule.scriptName || schedule.name)}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: '#ffc107',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                            disabled={loading}
+                            title="Pause schedule"
+                          >
+                            ⏸️ Pause
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => resumeSchedule(schedule.scriptName || schedule.name)}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: '#17a2b8',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                            disabled={loading}
+                            title="Resume schedule"
+                          >
+                            ▶️ Resume
+                          </button>
+                        )}
                         <button
                           onClick={() => handleScheduleEdit(schedule)}
                           style={{
@@ -982,7 +1039,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                           ✏️ Edit
                         </button>
                         <button
-                          onClick={() => handleScheduleDelete(schedule.name)}
+                          onClick={() => handleScheduleDelete(schedule.scriptName || schedule.name)}
                           style={{
                             padding: '6px 12px',
                             backgroundColor: '#dc3545',
@@ -1276,20 +1333,21 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
               </div>
 
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Events (comma-separated):</label>
-                <input
-                  type="text"
-                  name="events"
-                  value={Array.isArray(formData.events) ? formData.events.join(', ') : formData.events}
-                  onChange={handleInputChange}
-                  placeholder="create, update, delete"
-                  style={{ 
-                    width: '100%', 
-                    padding: '8px', 
-                    border: '1px solid #ccc', 
-                    borderRadius: '4px'
-                  }}
-                />
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Events:</label>
+                <div className="checkbox-group" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                  {['create', 'update', 'delete'].map((event) => (
+                    <label key={event} className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        value={event}
+                        checked={formData.events.includes(event)}
+                        onChange={handleEventChange}
+                        style={{ marginRight: '5px' }}
+                      />
+                      {event.charAt(0).toUpperCase() + event.slice(1)}
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div style={{ marginBottom: '15px' }}>
@@ -1445,91 +1503,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                   <strong>Rate Limiting:</strong> Controls script execution frequency and retry behavior. 
                   Higher values allow more frequent execution but may impact performance.
                 </div>
-              </div>
-
-              {/* Cron Scheduling Configuration */}
-              <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f1f8ff', borderRadius: '6px', border: '1px solid #b8daff' }}>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
-                  <input
-                    type="checkbox"
-                    id="cronEnabled"
-                    checked={formData.cronSchedule.enabled}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      cronSchedule: {
-                        ...prev.cronSchedule,
-                        enabled: e.target.checked
-                      }
-                    }))}
-                    style={{ marginRight: '8px' }}
-                  />
-                  <label htmlFor="cronEnabled" style={{ fontWeight: 'bold', color: '#495057', fontSize: '14px' }}>
-                    ⏰ Enable Cron Scheduling
-                  </label>
-                </div>
-
-                {formData.cronSchedule.enabled && (
-                  <>
-                    <div style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
-                        Cron Expression:
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.cronSchedule.expression}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          cronSchedule: {
-                            ...prev.cronSchedule,
-                            expression: e.target.value
-                          }
-                        }))}
-                        placeholder="* * * * * (every minute)"
-                        style={{ 
-                          width: '100%', 
-                          padding: '8px', 
-                          border: '1px solid #ccc', 
-                          borderRadius: '4px',
-                          fontFamily: 'monospace'
-                        }}
-                      />
-                      <div style={{ marginTop: '5px', fontSize: '11px', color: '#6c757d' }}>
-                        Examples: "0 9 * * *" (daily at 9 AM), "*/15 * * * *" (every 15 minutes), "0 0 * * 1" (every Monday at midnight)
-                      </div>
-                    </div>
-
-                    <div style={{ marginBottom: '10px' }}>
-                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
-                        Cron Payload (JSON):
-                      </label>
-                      <textarea
-                        value={formData.cronSchedule.payload}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          cronSchedule: {
-                            ...prev.cronSchedule,
-                            payload: e.target.value
-                          }
-                        }))}
-                        placeholder='{"scheduledTask": true, "type": "maintenance"}'
-                        rows="3"
-                        style={{ 
-                          width: '100%', 
-                          padding: '8px', 
-                          border: '1px solid #ccc', 
-                          borderRadius: '4px',
-                          fontFamily: 'monospace',
-                          fontSize: '12px'
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ marginTop: '8px', fontSize: '11px', color: '#6c757d' }}>
-                      <strong>Cron Scheduling:</strong> Automatically executes the script based on the cron expression. 
-                      The payload will be merged with the script context during scheduled execution.
-                    </div>
-                  </>
-                )}
               </div>
 
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

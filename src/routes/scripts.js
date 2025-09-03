@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 // Create a new script
 router.post('/', async (req, res) => {
   try {
-    const { name, code, collection, events, filters, enabled = true, rateLimit, description, cronSchedule } = req.body;
+    const { name, code, collection, events, filters, enabled = true, rateLimit, description } = req.body;
 
     // Validate required fields
     if (!name || !code || !collection || !events) {
@@ -36,8 +36,8 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Validate events array (now includes 'cron' for scheduled execution)
-    const validEvents = ['create', 'update', 'delete', 'cron'];
+    // Validate events array (only database events for event scripts)
+    const validEvents = ['create', 'update', 'delete'];
     const invalidEvents = events.filter(event => !validEvents.includes(event));
     if (invalidEvents.length > 0) {
       return res.status(400).json({
@@ -45,18 +45,6 @@ router.post('/', async (req, res) => {
         error: 'Bad Request',
         message: `Invalid events: ${invalidEvents.join(', ')}. Valid events are: ${validEvents.join(', ')}`
       });
-    }
-
-    // Validate cron schedule if cron event is specified
-    if (events.includes('cron') && cronSchedule) {
-      const validation = dbService.scriptExecution.validateCronExpression(cronSchedule.expression);
-      if (!validation.valid) {
-        return res.status(400).json({
-          success: false,
-          error: 'Bad Request',
-          message: `Invalid cron expression: ${cronSchedule.expression}`
-        });
-      }
     }
 
     // Validate JavaScript code (basic syntax check)
@@ -97,28 +85,11 @@ router.post('/', async (req, res) => {
       filters: filters || {},
       enabled,
       rateLimit: scriptRateLimit,
-      cronSchedule: cronSchedule || null, // Store cron schedule configuration
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
     const result = await dbService.createScript(script);
-    
-    // If cron event is enabled and cron schedule is provided, schedule the script
-    if (events.includes('cron') && cronSchedule && cronSchedule.expression && result.insertedId) {
-      try {
-        const scriptWithId = { ...script, _id: result.insertedId };
-        const scheduleResult = dbService.scriptExecution.scheduleScript(
-          scriptWithId, 
-          cronSchedule.expression, 
-          cronSchedule.payload || {}
-        );
-        console.log(`✅ Script "${name}" scheduled successfully:`, scheduleResult);
-      } catch (scheduleError) {
-        console.error(`❌ Failed to schedule script "${name}":`, scheduleError);
-        // Don't fail the entire creation if scheduling fails
-      }
-    }
     
     res.status(201).json({
       success: true,
@@ -341,7 +312,7 @@ router.post('/:id/test', async (req, res) => {
       });
     }
 
-    // Create test payload
+    // Create test payload with comprehensive context
     const payload = testPayload || {
       event: 'test',
       script: {
@@ -351,7 +322,32 @@ router.post('/:id/test', async (req, res) => {
       collection: script.collection,
       timestamp: new Date().toISOString(),
       data: {
-        document: { test: true, message: 'This is a test execution' }
+        document: { 
+          _id: '507f1f77bcf86cd799439011',
+          name: 'Test Document',
+          email: 'test@example.com',
+          createdAt: new Date().toISOString(),
+          test: true,
+          message: 'This is a test execution' 
+        },
+        previous: script.events.includes('update') ? { 
+          _id: '507f1f77bcf86cd799439011',
+          name: 'Previous Document',
+          email: 'old@example.com',
+          updatedAt: new Date(Date.now() - 60000).toISOString()
+        } : null
+      },
+      user: {
+        id: 'test-user',
+        role: 'admin'
+      },
+      request: {
+        method: 'POST',
+        url: `/api/${script.collection}`,
+        headers: {
+          'content-type': 'application/json',
+          'user-agent': 'test-client/1.0'
+        }
       }
     };
 
@@ -407,6 +403,207 @@ router.post('/admin/clear-rate-limits', (req, res) => {
   }
 });
 
+// Create new cron schedule (frontend API)
+router.post('/schedule', async (req, res) => {
+  try {
+    const { name, cronExpression, scriptCode } = req.body;
+
+    if (!name || !cronExpression || !scriptCode) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bad Request',
+        message: 'Name, cron expression, and script code are required'
+      });
+    }
+
+    // Validate cron expression
+    const validation = dbService.scriptExecution.validateCronExpression(cronExpression);
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bad Request',
+        message: 'Invalid cron expression'
+      });
+    }
+
+    // Create a script object for the schedule
+    const scriptObj = {
+      name: name,
+      code: scriptCode
+    };
+
+    const result = await dbService.scriptExecution.scheduleScript(scriptObj, cronExpression);
+
+    res.json({
+      success: true,
+      data: {
+        name,
+        cronExpression,
+        scriptCode,
+        scheduled: true,
+        nextExecution: result.nextExecution
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating schedule:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
+// Update cron schedule (frontend API)
+router.put('/schedule/:name', async (req, res) => {
+  try {
+    const { name } = req.params;
+    const { cronExpression, scriptCode } = req.body;
+
+    if (!cronExpression || !scriptCode) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bad Request',
+        message: 'Cron expression and script code are required'
+      });
+    }
+
+    // Validate cron expression
+    const validation = dbService.scriptExecution.validateCronExpression(cronExpression);
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bad Request',
+        message: 'Invalid cron expression'
+      });
+    }
+
+    // First unschedule the existing job
+    await dbService.scriptExecution.unscheduleScript(name);
+    
+    // Then create a new schedule with updated script code
+    const scriptObj = {
+      name: name,
+      code: scriptCode
+    };
+
+    const result = await dbService.scriptExecution.scheduleScript(scriptObj, cronExpression);
+
+    res.json({
+      success: true,
+      data: {
+        name,
+        cronExpression,
+        scriptCode,
+        updated: true,
+        nextExecution: result.nextExecution
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating schedule:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
+// Delete cron schedule (frontend API)
+router.delete('/schedule/:name', async (req, res) => {
+  try {
+    const { name } = req.params;
+
+    const result = await dbService.scriptExecution.unscheduleScript(name);
+
+    res.json({
+      success: true,
+      data: {
+        name,
+        unscheduled: true
+      }
+    });
+
+  } catch (error) {
+    console.error('Error deleting schedule:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
+// Pause cron schedule (frontend API)
+router.post('/schedule/:name/pause', async (req, res) => {
+  try {
+    const { name } = req.params;
+
+    const result = await dbService.scriptExecution.pauseScheduledScript(name);
+
+    if (!result.success) {
+      return res.status(404).json({
+        success: false,
+        error: 'Not Found',
+        message: result.message
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        name,
+        status: result.status,
+        message: result.message
+      }
+    });
+
+  } catch (error) {
+    console.error('Error pausing schedule:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
+// Resume cron schedule (frontend API)
+router.post('/schedule/:name/resume', async (req, res) => {
+  try {
+    const { name } = req.params;
+
+    const result = await dbService.scriptExecution.resumeScheduledScript(name);
+
+    if (!result.success) {
+      return res.status(404).json({
+        success: false,
+        error: 'Not Found',
+        message: result.message
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        name,
+        status: result.status,
+        message: result.message
+      }
+    });
+
+  } catch (error) {
+    console.error('Error resuming schedule:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
 // Schedule a script with cron expression
 router.post('/:id/schedule', async (req, res) => {
   try {
@@ -442,7 +639,7 @@ router.post('/:id/schedule', async (req, res) => {
     }
 
     // Schedule the script
-    const result = dbService.scriptExecution.scheduleScript(script, cronExpression, payload);
+    const result = await dbService.scriptExecution.scheduleScript(script, cronExpression, payload);
 
     res.json({
       success: true,
@@ -470,7 +667,7 @@ router.delete('/:id/schedule', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = dbService.scriptExecution.unscheduleScript(id);
+    const result = await dbService.scriptExecution.unscheduleScript(id);
 
     if (result.success) {
       res.json({
@@ -612,7 +809,48 @@ router.put('/:id/schedule', async (req, res) => {
   }
 });
 
-// Validate cron expression
+// Validate cron expression (GET with URL parameter)
+router.get('/cron/validate/:expression', (req, res) => {
+  try {
+    const cronExpression = decodeURIComponent(req.params.expression);
+
+    if (!cronExpression) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bad Request',
+        message: 'Cron expression is required'
+      });
+    }
+
+    const validation = dbService.scriptExecution.validateCronExpression(cronExpression);
+
+    res.json({
+      success: true,
+      data: {
+        valid: validation.valid,
+        expression: validation.expression,
+        examples: {
+          'Every minute': '* * * * *',
+          'Every hour': '0 * * * *',
+          'Every day at midnight': '0 0 * * *',
+          'Every Monday at 9 AM': '0 9 * * 1',
+          'Every 15 minutes': '*/15 * * * *',
+          'Twice a day (9 AM and 6 PM)': '0 9,18 * * *'
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error validating cron expression:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
+// Validate cron expression (POST with body)
 router.post('/cron/validate', (req, res) => {
   try {
     const { cronExpression } = req.body;

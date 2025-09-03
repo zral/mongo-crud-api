@@ -6,6 +6,9 @@ const cron = require('node-cron');
 
 class ScriptExecutionService {
   constructor() {
+    // Database reference will be set by setDatabase()
+    this.db = null;
+    
     // Rate limiting: Map of script IDs to their last execution times and counts
     this.rateLimitMap = new Map();
     
@@ -55,6 +58,23 @@ class ScriptExecutionService {
     
     // Reset daily stats if needed
     this.checkDailyReset();
+  }
+
+  /**
+   * Set database reference for persistence
+   */
+  setDatabase(db) {
+    this.db = db;
+  }
+
+  /**
+   * Get the scheduled scripts collection
+   */
+  getScheduledScriptsCollection() {
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+    return this.db.collection('_scheduled_scripts');
   }
 
   /**
@@ -246,8 +266,22 @@ class ScriptExecutionService {
    */
   createApiContext(payload, baseUrl = 'http://localhost:3000') {
     const self = this;
+    
+    // Create the context object that will be available to scripts
+    const context = {
+      event: payload?.event || 'test',
+      collection: payload?.collection || 'unknown',
+      timestamp: payload?.timestamp || new Date().toISOString(),
+      data: payload?.data || { document: { test: true } },
+      script: payload?.script || { name: 'test-script' },
+      ...payload // Include all payload properties
+    };
+    
     return {
-      // Payload data
+      // Context object (main interface for scripts)
+      context,
+      
+      // Payload data (legacy support)
       payload,
       
       // Collections API methods
@@ -327,6 +361,14 @@ class ScriptExecutionService {
           
           return response.data;
         }
+      },
+      
+      // Console object for logging
+      console: {
+        log: (...args) => console.log('[Script]', ...args),
+        error: (...args) => console.error('[Script Error]', ...args),
+        warn: (...args) => console.warn('[Script Warning]', ...args),
+        info: (...args) => console.info('[Script Info]', ...args)
       },
       
       // Utility functions
@@ -581,7 +623,7 @@ class ScriptExecutionService {
   /**
    * Schedule a script to run on a cron schedule
    */
-  scheduleScript(script, cronExpression, payload = {}) {
+  async scheduleScript(script, cronExpression, payload = {}) {
     const scriptId = script._id ? script._id.toString() : script.name;
     
     // Validate cron expression
@@ -590,7 +632,7 @@ class ScriptExecutionService {
     }
     
     // Stop existing schedule if any
-    this.unscheduleScript(scriptId);
+    await this.unscheduleScript(scriptId);
     
     console.log(`📅 Scheduling script "${script.name}" with cron: ${cronExpression}`);
     
@@ -600,6 +642,9 @@ class ScriptExecutionService {
         console.log(`⏰ Executing scheduled script: ${script.name}`);
         this.cronStats.cronExecutions++;
         this.cronStats.lastCronExecution = new Date().toISOString();
+        
+        // Update last execution time in database
+        await this.updateScheduledScriptExecution(scriptId);
         
         // Execute the script with cron-specific payload
         const cronPayload = {
@@ -618,21 +663,22 @@ class ScriptExecutionService {
         console.error(`❌ Scheduled script "${script.name}" execution failed:`, error);
       }
     }, {
-      scheduled: false // Don't start immediately
+      scheduled: true // Start immediately and set running state
     });
     
-    // Store the job
+    // Store the job in memory
     this.scheduledJobs.set(scriptId, {
       job,
       cronExpression,
       script,
       payload,
       createdAt: new Date().toISOString(),
-      lastExecution: null
+      lastExecution: null,
+      isRunning: true // Track running state manually
     });
     
-    // Start the job
-    job.start();
+    // Persist to database
+    await this.persistScheduledScript(scriptId, script, cronExpression, payload);
     
     // Update statistics
     this.cronStats.totalScheduledScripts++;
@@ -649,13 +695,16 @@ class ScriptExecutionService {
   /**
    * Unschedule a script
    */
-  unscheduleScript(scriptId) {
+  async unscheduleScript(scriptId) {
     const scheduledJob = this.scheduledJobs.get(scriptId);
     if (scheduledJob) {
       scheduledJob.job.stop();
       scheduledJob.job.destroy();
       this.scheduledJobs.delete(scriptId);
       this.cronStats.activeSchedules = this.scheduledJobs.size;
+      
+      // Remove from database
+      await this.removeScheduledScriptFromDB(scriptId);
       
       console.log(`🗑️ Unscheduled script: ${scriptId}`);
       return { success: true, message: `Script ${scriptId} unscheduled` };
@@ -676,7 +725,7 @@ class ScriptExecutionService {
         cronExpression: jobData.cronExpression,
         createdAt: jobData.createdAt,
         lastExecution: jobData.lastExecution,
-        isRunning: jobData.job.running
+        isRunning: jobData.isRunning !== undefined ? jobData.isRunning : true
       });
     }
     return scheduled;
@@ -717,6 +766,62 @@ class ScriptExecutionService {
       message: `Script "${scheduledJob.script.name}" rescheduled with new cron: ${newCronExpression}`,
       previousCron: scheduledJob.cronExpression,
       newCron: newCronExpression
+    };
+  }
+
+  /**
+   * Pause a scheduled script (stop execution but keep schedule)
+   */
+  async pauseScheduledScript(scriptId) {
+    const scheduledJob = this.scheduledJobs.get(scriptId);
+    if (!scheduledJob) {
+      return { success: false, message: `No scheduled job found for script: ${scriptId}` };
+    }
+
+    if (!scheduledJob.isRunning) {
+      return { success: false, message: `Script ${scriptId} is already paused` };
+    }
+
+    scheduledJob.job.stop();
+    scheduledJob.isRunning = false; // Update manual tracking
+    
+    // Persist state change to database
+    await this.updateScheduledScriptState(scriptId, false);
+    
+    console.log(`⏸️ Paused scheduled script: ${scheduledJob.script.name}`);
+    
+    return {
+      success: true,
+      message: `Script ${scriptId} has been paused`,
+      status: 'paused'
+    };
+  }
+
+  /**
+   * Resume a paused scheduled script
+   */
+  async resumeScheduledScript(scriptId) {
+    const scheduledJob = this.scheduledJobs.get(scriptId);
+    if (!scheduledJob) {
+      return { success: false, message: `No scheduled job found for script: ${scriptId}` };
+    }
+
+    if (scheduledJob.isRunning) {
+      return { success: false, message: `Script ${scriptId} is already running` };
+    }
+
+    scheduledJob.job.start();
+    scheduledJob.isRunning = true; // Update manual tracking
+    
+    // Persist state change to database
+    await this.updateScheduledScriptState(scriptId, true);
+    
+    console.log(`▶️ Resumed scheduled script: ${scheduledJob.script.name}`);
+    
+    return {
+      success: true,
+      message: `Script ${scriptId} has been resumed`,
+      status: 'running'
     };
   }
 
@@ -801,6 +906,184 @@ class ScriptExecutionService {
       message: `Started ${startedCount} scheduled scripts`,
       startedCount
     };
+  }
+
+  /**
+   * Persist scheduled script to database
+   */
+  async persistScheduledScript(scriptId, script, cronExpression, payload) {
+    try {
+      if (!this.db) return;
+      
+      const collection = this.getScheduledScriptsCollection();
+      const doc = {
+        _id: scriptId,
+        scriptId,
+        scriptName: script.name,
+        scriptCode: script.code,
+        script: script,
+        cronExpression,
+        payload,
+        isRunning: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastExecution: null
+      };
+      
+      await collection.replaceOne(
+        { _id: scriptId },
+        doc,
+        { upsert: true }
+      );
+      
+      console.log(`💾 Persisted scheduled script: ${scriptId}`);
+    } catch (error) {
+      console.error(`❌ Failed to persist scheduled script ${scriptId}:`, error);
+    }
+  }
+
+  /**
+   * Remove scheduled script from database
+   */
+  async removeScheduledScriptFromDB(scriptId) {
+    try {
+      if (!this.db) return;
+      
+      const collection = this.getScheduledScriptsCollection();
+      await collection.deleteOne({ _id: scriptId });
+      
+      console.log(`🗑️ Removed scheduled script from DB: ${scriptId}`);
+    } catch (error) {
+      console.error(`❌ Failed to remove scheduled script ${scriptId} from DB:`, error);
+    }
+  }
+
+  /**
+   * Update last execution time for scheduled script
+   */
+  async updateScheduledScriptExecution(scriptId) {
+    try {
+      if (!this.db) return;
+      
+      const collection = this.getScheduledScriptsCollection();
+      await collection.updateOne(
+        { _id: scriptId },
+        { 
+          $set: { 
+            lastExecution: new Date(),
+            updatedAt: new Date()
+          }
+        }
+      );
+      
+      // Update in-memory data as well
+      const jobData = this.scheduledJobs.get(scriptId);
+      if (jobData) {
+        jobData.lastExecution = new Date().toISOString();
+      }
+    } catch (error) {
+      console.error(`❌ Failed to update execution time for ${scriptId}:`, error);
+    }
+  }
+
+  /**
+   * Restore scheduled scripts from database on startup
+   */
+  async restoreScheduledScripts() {
+    try {
+      if (!this.db) {
+        console.log('🔄 Database not available, skipping scheduled scripts restoration');
+        return;
+      }
+      
+      const collection = this.getScheduledScriptsCollection();
+      const scheduledScripts = await collection.find({}).toArray();
+      
+      console.log(`🔄 Restoring ${scheduledScripts.length} scheduled scripts from database...`);
+      
+      for (const scriptDoc of scheduledScripts) {
+        try {
+          // Recreate the cron job
+          const job = cron.schedule(scriptDoc.cronExpression, async () => {
+            try {
+              console.log(`⏰ Executing scheduled script: ${scriptDoc.scriptName}`);
+              this.cronStats.cronExecutions++;
+              this.cronStats.lastCronExecution = new Date().toISOString();
+              
+              // Update last execution time in database
+              await this.updateScheduledScriptExecution(scriptDoc.scriptId);
+              
+              // Execute the script with cron-specific payload
+              const cronPayload = {
+                ...scriptDoc.payload,
+                trigger: 'cron',
+                scheduled: true,
+                executionTime: new Date().toISOString(),
+                cronExpression: scriptDoc.cronExpression
+              };
+              
+              const result = await this.executeScript(scriptDoc.script, cronPayload);
+              console.log(`✅ Scheduled script "${scriptDoc.scriptName}" executed successfully:`, result);
+              
+            } catch (error) {
+              this.cronStats.failedCronExecutions++;
+              console.error(`❌ Scheduled script "${scriptDoc.scriptName}" execution failed:`, error);
+            }
+          }, {
+            scheduled: scriptDoc.isRunning // Start based on saved state
+          });
+          
+          // Store the job in memory
+          this.scheduledJobs.set(scriptDoc.scriptId, {
+            job,
+            cronExpression: scriptDoc.cronExpression,
+            script: scriptDoc.script,
+            payload: scriptDoc.payload,
+            createdAt: scriptDoc.createdAt.toISOString(),
+            lastExecution: scriptDoc.lastExecution ? scriptDoc.lastExecution.toISOString() : null,
+            isRunning: scriptDoc.isRunning
+          });
+          
+          console.log(`✅ Restored scheduled script: ${scriptDoc.scriptName} (${scriptDoc.cronExpression})`);
+          
+        } catch (error) {
+          console.error(`❌ Failed to restore scheduled script ${scriptDoc.scriptName}:`, error);
+        }
+      }
+      
+      // Update statistics
+      this.cronStats.totalScheduledScripts = this.scheduledJobs.size;
+      this.cronStats.activeSchedules = this.scheduledJobs.size;
+      
+      console.log(`🔄 Successfully restored ${this.scheduledJobs.size} scheduled scripts`);
+      
+    } catch (error) {
+      console.error('❌ Failed to restore scheduled scripts:', error);
+    }
+  }
+
+  /**
+   * Update scheduled script state (pause/resume)
+   */
+  async updateScheduledScriptState(scriptId, isRunning) {
+    try {
+      if (!this.db) return;
+      
+      const collection = this.getScheduledScriptsCollection();
+      await collection.updateOne(
+        { _id: scriptId },
+        { 
+          $set: { 
+            isRunning,
+            updatedAt: new Date()
+          }
+        }
+      );
+      
+      console.log(`💾 Updated scheduled script state: ${scriptId} -> ${isRunning ? 'running' : 'paused'}`);
+    } catch (error) {
+      console.error(`❌ Failed to update state for ${scriptId}:`, error);
+    }
   }
 }
 
