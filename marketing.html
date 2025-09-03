@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrudAPI Pro - The Ultimate Backend-as-a-Service Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 120px 0 100px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(45deg, #fff, #e0e7ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .hero-description {
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            opacity: 0.8;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 16px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #ff6b6b;
+            color: white;
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        /* Stats Section */
+        .stats {
+            background: white;
+            padding: 80px 0;
+            box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+
+        .stat-item h3 {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-item p {
+            font-size: 1.1rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        /* Features Section */
+        .features {
+            background: #f8fafc;
+            padding: 100px 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .section-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+        }
+
+        .section-subtitle {
+            font-size: 1.3rem;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-icon {
+            font-size: 4rem;
+            margin-bottom: 30px;
+            display: block;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.7;
+            font-size: 1rem;
+        }
+
+        /* Use Cases Section */
+        .use-cases {
+            background: white;
+            padding: 100px 0;
+        }
+
+        .use-cases-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .use-case {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 15px;
+            padding: 30px;
+            border-left: 5px solid #667eea;
+        }
+
+        .use-case h4 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .use-case p {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .use-case-tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+
+        /* Testimonials */
+        .testimonials {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 0;
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .testimonial {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .testimonial-content {
+            font-size: 1.2rem;
+            line-height: 1.7;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .testimonial-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .testimonial-info h5 {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .testimonial-info p {
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+
+        /* Pricing Section */
+        .pricing {
+            background: white;
+            padding: 100px 0;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .pricing-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            border: 2px solid #f0f0f0;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .pricing-card.featured {
+            border-color: #667eea;
+            transform: scale(1.05);
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.2);
+        }
+
+        .pricing-card.featured::before {
+            content: 'Most Popular';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #667eea;
+            color: white;
+            padding: 8px 24px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .pricing-card.featured:hover {
+            transform: scale(1.05) translateY(-5px);
+        }
+
+        .pricing-plan {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .pricing-price {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+
+        .pricing-period {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin-bottom: 40px;
+        }
+
+        .pricing-features li {
+            padding: 10px 0;
+            color: #555;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .pricing-features li:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-features li::before {
+            content: '✓';
+            color: #22c55e;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        /* CTA Section */
+        .final-cta {
+            background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+        }
+
+        .final-cta h2 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .final-cta p {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+            opacity: 0.8;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1a1a1a;
+            color: white;
+            padding: 60px 0 30px;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .footer-section h4 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .footer-section a {
+            color: #ccc;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 10px;
+            transition: color 0.3s ease;
+        }
+
+        .footer-section a:hover {
+            color: #667eea;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #333;
+            padding-top: 30px;
+            text-align: center;
+            color: #999;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .features-grid,
+            .pricing-grid,
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .pricing-card.featured {
+                transform: none;
+            }
+            
+            .pricing-card.featured:hover {
+                transform: translateY(-5px);
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-on-scroll {
+            animation: fadeInUp 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>CrudAPI Pro</h1>
+                <p class="hero-subtitle">The Ultimate Backend-as-a-Service Platform</p>
+                <p class="hero-description">
+                    Transform your development workflow with our enterprise-grade MongoDB CRUD API. 
+                    Build, deploy, and scale applications faster than ever with JavaScript automation, 
+                    real-time webhooks, and zero backend complexity.
+                </p>
+                <div class="cta-buttons">
+                    <a href="#pricing" class="btn btn-primary">Start Free Trial</a>
+                    <a href="#features" class="btn btn-secondary">Watch Demo</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <h3>10M+</h3>
+                    <p>API Requests Processed</p>
+                </div>
+                <div class="stat-item">
+                    <h3>50K+</h3>
+                    <p>Developers Trust Us</p>
+                </div>
+                <div class="stat-item">
+                    <h3>99.9%</h3>
+                    <p>Uptime Guarantee</p>
+                </div>
+                <div class="stat-item">
+                    <h3>24/7</h3>
+                    <p>Expert Support</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Why 50,000+ Developers Choose CrudAPI Pro</h2>
+                <p class="section-subtitle">
+                    Everything you need to build modern applications, without the backend complexity
+                </p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>JavaScript Automation Engine</h3>
+                    <p>Execute custom JavaScript code automatically on database events. Build complex workflows with secure VM sandboxing, built-in API client, and intelligent rate limiting.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Zero-Config Dynamic APIs</h3>
+                    <p>Instantly expose all MongoDB collections as REST endpoints. No configuration, no setup - just connect your database and start building amazing applications.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔗</div>
+                    <h3>Enterprise Webhooks</h3>
+                    <p>Real-time event notifications with MongoDB-style filtering, per-webhook rate limiting, intelligent retry mechanisms, and comprehensive delivery analytics.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Advanced Data Processing</h3>
+                    <p>Upload CSV/Excel files with intelligent processing, bulk operations, data validation, and real-time import progress tracking for seamless data migration.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🛠️</div>
+                    <h3>Auto-Generated SDKs</h3>
+                    <p>Type-safe TypeScript SDKs generated automatically from your data models. OpenAPI 3.0 documentation and interactive Swagger UI included.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Beautiful Management Dashboard</h3>
+                    <p>Modern React interface for managing collections, configuring webhooks, creating automation scripts, and monitoring real-time system performance.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Intelligent Filtering</h3>
+                    <p>MongoDB-style queries with complex conditions, range filters, text search, field projection, and automatic schema discovery for dynamic collections.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Enterprise Security</h3>
+                    <p>Production-ready security with input validation, rate limiting, connection resilience, comprehensive audit logging, and SOC 2 compliance.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Cloud-Native Architecture</h3>
+                    <p>Docker containerization, auto-scaling, health monitoring, global CDN, and 99.9% uptime SLA with multi-region deployment options.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Use Cases Section -->
+    <section class="use-cases">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Perfect For Every Use Case</h2>
+                <p class="section-subtitle">
+                    From rapid prototyping to enterprise applications, CrudAPI Pro scales with your needs
+                </p>
+            </div>
+            
+            <div class="use-cases-grid">
+                <div class="use-case">
+                    <div class="use-case-tag">Startups</div>
+                    <h4>MVP Development</h4>
+                    <p>Launch your startup idea in days, not months. Focus on your unique value proposition while we handle all the backend complexity. Perfect for hackathons and rapid prototyping.</p>
+                </div>
+
+                <div class="use-case">
+                    <div class="use-case-tag">E-commerce</div>
+                    <h4>Online Store Automation</h4>
+                    <p>Automate order processing, inventory management, customer notifications, and payment workflows with JavaScript automation scripts. Scale from startup to enterprise.</p>
+                </div>
+
+                <div class="use-case">
+                    <div class="use-case-tag">SaaS</div>
+                    <h4>Multi-Tenant Applications</h4>
+                    <p>Build SaaS platforms with user management, subscription handling, data isolation, and real-time notifications. Enterprise-grade security included.</p>
+                </div>
+
+                <div class="use-case">
+                    <div class="use-case-tag">Mobile Apps</div>
+                    <h4>Mobile Backend</h4>
+                    <p>Power iOS and Android apps with instant APIs, real-time synchronization, push notifications, and offline-first architecture support.</p>
+                </div>
+
+                <div class="use-case">
+                    <div class="use-case-tag">IoT</div>
+                    <h4>IoT Data Platform</h4>
+                    <p>Collect, process, and analyze IoT sensor data with high-throughput APIs, real-time webhooks, and automated data processing workflows.</p>
+                </div>
+
+                <div class="use-case">
+                    <div class="use-case-tag">Enterprise</div>
+                    <h4>System Integration</h4>
+                    <p>Connect legacy systems with modern applications using webhooks, automation scripts, and enterprise-grade security and compliance features.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title" style="color: white;">Loved by Developers Worldwide</h2>
+                <p class="section-subtitle" style="color: rgba(255,255,255,0.8);">
+                    See what our community is saying about CrudAPI Pro
+                </p>
+            </div>
+            
+            <div class="testimonials-grid">
+                <div class="testimonial">
+                    <div class="testimonial-content">
+                        "CrudAPI Pro transformed our development process. What used to take weeks now takes hours. The JavaScript automation engine is a game-changer for our e-commerce workflows."
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">SJ</div>
+                        <div class="testimonial-info">
+                            <h5>Sarah Johnson</h5>
+                            <p>CTO, TechStart Solutions</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial">
+                    <div class="testimonial-content">
+                        "The webhook system and real-time capabilities are incredible. We built our entire notification system in one afternoon. The documentation and TypeScript SDKs are top-notch."
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">MR</div>
+                        <div class="testimonial-info">
+                            <h5>Mike Rodriguez</h5>
+                            <p>Lead Developer, InnovateCorp</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial">
+                    <div class="testimonial-content">
+                        "As a solo developer, CrudAPI Pro gives me superpowers. I can build full-stack applications faster than ever. The automation scripts handle all the tedious backend work."
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">EW</div>
+                        <div class="testimonial-info">
+                            <h5>Emily Watson</h5>
+                            <p>Freelance Developer</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial">
+                    <div class="testimonial-content">
+                        "We migrated from a custom backend to CrudAPI Pro and reduced our infrastructure costs by 70%. The performance and reliability are outstanding."
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">DK</div>
+                        <div class="testimonial-info">
+                            <h5>David Kim</h5>
+                            <p>Engineering Manager, ScaleUp Inc</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial">
+                    <div class="testimonial-content">
+                        "The support team is amazing. They helped us implement complex automation workflows that saved us months of development time. Highly recommended!"
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">AL</div>
+                        <div class="testimonial-info">
+                            <h5>Anna Lopez</h5>
+                            <p>Product Manager, DataFlow Systems</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial">
+                    <div class="testimonial-content">
+                        "CrudAPI Pro handles millions of requests for our mobile app. The scalability and monitoring features give us complete confidence in production."
+                    </div>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">JT</div>
+                        <div class="testimonial-info">
+                            <h5>James Thompson</h5>
+                            <p>VP Engineering, MobileFirst</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing" id="pricing">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Simple, Transparent Pricing</h2>
+                <p class="section-subtitle">
+                    Choose the perfect plan for your needs. Scale up or down anytime with no hidden fees.
+                </p>
+            </div>
+            
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-plan">Starter</div>
+                    <div class="pricing-price">$0</div>
+                    <div class="pricing-period">Free forever</div>
+                    <ul class="pricing-features">
+                        <li>Up to 3 collections</li>
+                        <li>10,000 API requests/month</li>
+                        <li>Basic webhooks (5 endpoints)</li>
+                        <li>JavaScript automation (100 executions/month)</li>
+                        <li>Community support</li>
+                        <li>Basic monitoring</li>
+                    </ul>
+                    <a href="#" class="btn btn-secondary">Get Started Free</a>
+                </div>
+
+                <div class="pricing-card featured">
+                    <div class="pricing-plan">Professional</div>
+                    <div class="pricing-price">$49</div>
+                    <div class="pricing-period">per month</div>
+                    <ul class="pricing-features">
+                        <li>Unlimited collections</li>
+                        <li>1M API requests/month</li>
+                        <li>Advanced webhooks (unlimited)</li>
+                        <li>JavaScript automation (10K executions/month)</li>
+                        <li>TypeScript SDK generation</li>
+                        <li>Priority support</li>
+                        <li>Advanced analytics</li>
+                        <li>Custom rate limiting</li>
+                        <li>99.9% uptime SLA</li>
+                    </ul>
+                    <a href="#" class="btn btn-primary">Start 14-Day Trial</a>
+                </div>
+
+                <div class="pricing-card">
+                    <div class="pricing-plan">Enterprise</div>
+                    <div class="pricing-price">$199</div>
+                    <div class="pricing-period">per month</div>
+                    <ul class="pricing-features">
+                        <li>Everything in Professional</li>
+                        <li>10M API requests/month</li>
+                        <li>Unlimited JavaScript automation</li>
+                        <li>Multi-region deployment</li>
+                        <li>SSO & SAML integration</li>
+                        <li>Custom integrations</li>
+                        <li>Dedicated support manager</li>
+                        <li>SOC 2 compliance</li>
+                        <li>99.99% uptime SLA</li>
+                        <li>On-premise deployment option</li>
+                    </ul>
+                    <a href="#" class="btn btn-secondary">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="final-cta">
+        <div class="container">
+            <h2>Ready to 10x Your Development Speed?</h2>
+            <p>Join thousands of developers who trust CrudAPI Pro for their backend needs</p>
+            <div class="cta-buttons">
+                <a href="#" class="btn btn-primary">Start Free Trial</a>
+                <a href="#" class="btn btn-secondary">Schedule Demo</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <a href="#">Features</a>
+                    <a href="#">Pricing</a>
+                    <a href="#">API Documentation</a>
+                    <a href="#">TypeScript SDK</a>
+                    <a href="#">Status Page</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Use Cases</h4>
+                    <a href="#">E-commerce</a>
+                    <a href="#">Mobile Apps</a>
+                    <a href="#">SaaS Platforms</a>
+                    <a href="#">IoT Applications</a>
+                    <a href="#">Enterprise Integration</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <a href="#">Documentation</a>
+                    <a href="#">Tutorials</a>
+                    <a href="#">Blog</a>
+                    <a href="#">Community</a>
+                    <a href="#">Changelog</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <a href="#">About</a>
+                    <a href="#">Careers</a>
+                    <a href="#">Contact</a>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2025 CrudAPI Pro. All rights reserved. Built with ❤️ for developers worldwide.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-on-scroll');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all feature cards and pricing cards
+        document.querySelectorAll('.feature-card, .pricing-card, .use-case, .testimonial').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
