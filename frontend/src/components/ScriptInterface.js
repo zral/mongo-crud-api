@@ -10,6 +10,16 @@ const ScriptInterface = () => {
   const [selectedScript, setSelectedScript] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [scriptStats, setScriptStats] = useState(null);
+  const [activeTab, setActiveTab] = useState('scripts'); // 'scripts' or 'schedules'
+  const [schedules, setSchedules] = useState([]);
+  const [cronStats, setCronStats] = useState(null);
+  const [scheduleFormData, setScheduleFormData] = useState({
+    name: '',
+    cronExpression: '',
+    scriptCode: ''
+  });
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -287,38 +297,268 @@ if (payload.event === 'create') {
 // Return value (optional)
 return { message: 'Script executed successfully', timestamp: utils.now() };`;
 
+  // Cron Schedule Management Functions
+  const loadSchedules = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/scripts/scheduled/list');
+      setSchedules(response.data.data?.schedules || []);
+    } catch (err) {
+      setError(`Failed to load schedules: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCronStats = async () => {
+    try {
+      const response = await api.get('/api/scripts/cron/statistics');
+      setCronStats(response.data);
+    } catch (err) {
+      console.error('Failed to load cron stats:', err);
+    }
+  };
+
+  const validateCronExpression = async (expression) => {
+    try {
+      const response = await api.get(`/api/scripts/cron/validate/${encodeURIComponent(expression)}`);
+      return response.data;
+    } catch (err) {
+      return { valid: false, error: err.response?.data?.message || err.message };
+    }
+  };
+
+  const handleScheduleSubmit = async (e) => {
+    e.preventDefault();
+    if (!scheduleFormData.name || !scheduleFormData.cronExpression || !scheduleFormData.scriptCode) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+
+      // Validate cron expression first
+      const validation = await validateCronExpression(scheduleFormData.cronExpression);
+      if (!validation.valid) {
+        setError(`Invalid cron expression: ${validation.error}`);
+        return;
+      }
+
+      const scheduleData = {
+        name: scheduleFormData.name,
+        cronExpression: scheduleFormData.cronExpression,
+        scriptCode: scheduleFormData.scriptCode
+      };
+
+      if (selectedSchedule) {
+        await api.put(`/api/scripts/schedule/${selectedSchedule.name}`, scheduleData);
+        setSuccess('Schedule updated successfully!');
+      } else {
+        await api.post('/api/scripts/schedule', scheduleData);
+        setSuccess('Schedule created successfully!');
+      }
+
+      await loadSchedules();
+      await loadCronStats();
+      resetScheduleForm();
+    } catch (err) {
+      setError(`Failed to save schedule: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleScheduleEdit = (schedule) => {
+    setSelectedSchedule(schedule);
+    setScheduleFormData({
+      name: schedule.name || '',
+      cronExpression: schedule.cronExpression || '',
+      scriptCode: schedule.scriptCode || ''
+    });
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleScheduleDelete = async (scheduleName) => {
+    if (!window.confirm('Are you sure you want to unschedule this script?')) return;
+
+    try {
+      setLoading(true);
+      await api.delete(`/api/scripts/schedule/${scheduleName}`);
+      setSuccess('Schedule deleted successfully!');
+      await loadSchedules();
+      await loadCronStats();
+    } catch (err) {
+      setError(`Failed to delete schedule: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const triggerScheduleManually = async (scheduleName) => {
+    try {
+      setLoading(true);
+      await api.post(`/api/scripts/scheduled/${scheduleName}/trigger`);
+      setSuccess(`Schedule "${scheduleName}" triggered manually!`);
+      await loadCronStats();
+    } catch (err) {
+      setError(`Failed to trigger schedule: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetCronStats = async () => {
+    if (!window.confirm('Are you sure you want to reset all cron statistics?')) return;
+
+    try {
+      setLoading(true);
+      await api.delete('/api/scripts/cron/statistics/reset');
+      setSuccess('Cron statistics reset successfully!');
+      await loadCronStats();
+    } catch (err) {
+      setError(`Failed to reset cron statistics: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetScheduleForm = () => {
+    setSelectedSchedule(null);
+    setScheduleFormData({
+      name: '',
+      cronExpression: '',
+      scriptCode: ''
+    });
+    setIsScheduleModalOpen(false);
+  };
+
+  const handleScheduleInputChange = (e) => {
+    const { name, value } = e.target;
+    setScheduleFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Load schedules and cron stats when switching to schedules tab
+  useEffect(() => {
+    if (activeTab === 'schedules') {
+      loadSchedules();
+      loadCronStats();
+    }
+  }, [activeTab]);
+
   return (
     <div className="script-interface" style={{ padding: '20px' }}>
       <div className="script-header" style={{ marginBottom: '20px' }}>
-        <h2>JavaScript Snippets Management</h2>
-        <div className="script-actions" style={{ marginTop: '10px' }}>
-          <button 
-            onClick={() => { resetForm(); setIsModalOpen(true); }}
-            style={{ 
-              padding: '10px 20px', 
-              backgroundColor: '#007bff', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '4px',
-              marginRight: '10px'
+        <h2>JavaScript Automation & Scheduling</h2>
+        
+        {/* Tab Navigation */}
+        <div style={{ 
+          display: 'flex', 
+          borderBottom: '2px solid #e9ecef', 
+          marginTop: '20px',
+          marginBottom: '20px'
+        }}>
+          <button
+            onClick={() => setActiveTab('scripts')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              borderBottom: activeTab === 'scripts' ? '2px solid #007bff' : '2px solid transparent',
+              backgroundColor: 'transparent',
+              color: activeTab === 'scripts' ? '#007bff' : '#6c757d',
+              fontSize: '16px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              marginRight: '20px'
             }}
-            disabled={loading}
           >
-            Create New Script
+            📝 Event Scripts
           </button>
-          <button 
-            onClick={clearRateLimits}
-            style={{ 
-              padding: '10px 20px', 
-              backgroundColor: '#ffc107', 
-              color: '#212529', 
-              border: 'none', 
-              borderRadius: '4px'
+          <button
+            onClick={() => setActiveTab('schedules')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              borderBottom: activeTab === 'schedules' ? '2px solid #007bff' : '2px solid transparent',
+              backgroundColor: 'transparent',
+              color: activeTab === 'schedules' ? '#007bff' : '#6c757d',
+              fontSize: '16px',
+              fontWeight: '500',
+              cursor: 'pointer'
             }}
-            disabled={loading}
           >
-            Clear Rate Limits
+            ⏰ Cron Schedules
           </button>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="script-actions">
+          {activeTab === 'scripts' && (
+            <>
+              <button 
+                onClick={() => { resetForm(); setIsModalOpen(true); }}
+                style={{ 
+                  padding: '10px 20px', 
+                  backgroundColor: '#007bff', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px',
+                  marginRight: '10px'
+                }}
+                disabled={loading}
+              >
+                Create New Script
+              </button>
+              <button 
+                onClick={clearRateLimits}
+                style={{ 
+                  padding: '10px 20px', 
+                  backgroundColor: '#ffc107', 
+                  color: '#212529', 
+                  border: 'none', 
+                  borderRadius: '4px'
+                }}
+                disabled={loading}
+              >
+                Clear Rate Limits
+              </button>
+            </>
+          )}
+          {activeTab === 'schedules' && (
+            <>
+              <button 
+                onClick={() => { resetScheduleForm(); setIsScheduleModalOpen(true); }}
+                style={{ 
+                  padding: '10px 20px', 
+                  backgroundColor: '#28a745', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px',
+                  marginRight: '10px'
+                }}
+                disabled={loading}
+              >
+                Create New Schedule
+              </button>
+              <button 
+                onClick={resetCronStats}
+                style={{ 
+                  padding: '10px 20px', 
+                  backgroundColor: '#dc3545', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px'
+                }}
+                disabled={loading}
+              >
+                Reset Cron Stats
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -334,7 +574,10 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
         </div>
       )}
 
-      {/* Enhanced Statistics Section */}
+      {/* Content based on active tab */}
+      {activeTab === 'scripts' && (
+        <>
+          {/* Enhanced Statistics Section */}
       {scriptStats && (
         <div style={{ marginBottom: '20px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -611,7 +854,347 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
             ))}
           </div>
         )}
-      </div>
+          </div>
+        </>
+      )}
+
+      {/* Schedules Tab Content */}
+      {activeTab === 'schedules' && (
+        <>
+          {/* Cron Statistics Section */}
+          {cronStats && (
+            <div style={{ marginBottom: '20px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
+              <h3 style={{ marginBottom: '15px', color: '#495057' }}>⏰ Cron Scheduling Statistics</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#e3f2fd', borderRadius: '6px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1976d2' }}>
+                    {cronStats.totalExecutions || 0}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#666' }}>Total Executions</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#e8f5e8', borderRadius: '6px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#388e3c' }}>
+                    {cronStats.successfulExecutions || 0}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#666' }}>Successful</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#ffebee', borderRadius: '6px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#d32f2f' }}>
+                    {cronStats.failedExecutions || 0}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#666' }}>Failed</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#fff3e0', borderRadius: '6px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f57c00' }}>
+                    {schedules.length || 0}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#666' }}>Active Schedules</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Schedules List */}
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ marginBottom: '15px', color: '#495057' }}>📅 Active Cron Schedules</h3>
+            {loading && schedules.length === 0 ? (
+              <div>Loading schedules...</div>
+            ) : schedules.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '40px', 
+                backgroundColor: '#f8f9fa', 
+                borderRadius: '8px',
+                color: '#6c757d'
+              }}>
+                <div style={{ fontSize: '48px', marginBottom: '10px' }}>⏰</div>
+                <div style={{ fontSize: '18px', marginBottom: '5px' }}>No scheduled scripts</div>
+                <div style={{ fontSize: '14px' }}>Create your first cron schedule to automate script execution</div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '15px' }}>
+                {schedules.map((schedule, index) => (
+                  <div key={index} style={{ 
+                    border: '1px solid #e0e0e0', 
+                    borderRadius: '8px', 
+                    padding: '20px',
+                    backgroundColor: 'white',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                      <div>
+                        <h4 style={{ margin: '0 0 8px 0', color: '#495057', fontSize: '18px' }}>
+                          {schedule.name}
+                        </h4>
+                        <div style={{ 
+                          fontFamily: 'monospace', 
+                          fontSize: '14px', 
+                          color: '#0056b3',
+                          backgroundColor: '#e3f2fd',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          display: 'inline-block',
+                          marginBottom: '8px'
+                        }}>
+                          {schedule.cronExpression}
+                        </div>
+                        {schedule.nextRun && (
+                          <div style={{ fontSize: '12px', color: '#666' }}>
+                            Next run: {new Date(schedule.nextRun).toLocaleString()}
+                          </div>
+                        )}
+                        {schedule.lastRun && (
+                          <div style={{ fontSize: '12px', color: '#666' }}>
+                            Last run: {new Date(schedule.lastRun).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                        <button
+                          onClick={() => triggerScheduleManually(schedule.name)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#28a745',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                          disabled={loading}
+                          title="Trigger manually"
+                        >
+                          ▶️ Run
+                        </button>
+                        <button
+                          onClick={() => handleScheduleEdit(schedule)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#007bff',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                          title="Edit schedule"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => handleScheduleDelete(schedule.name)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                          disabled={loading}
+                          title="Delete schedule"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {schedule.scriptCode && (
+                      <div style={{ marginTop: '15px' }}>
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: '#666', 
+                          marginBottom: '8px',
+                          fontWeight: 'bold'
+                        }}>
+                          Script Code Preview:
+                        </div>
+                        <pre style={{ 
+                          backgroundColor: '#f8f9fa', 
+                          padding: '12px', 
+                          borderRadius: '4px', 
+                          fontSize: '11px',
+                          maxHeight: '120px',
+                          overflow: 'auto',
+                          margin: 0,
+                          border: '1px solid #e9ecef'
+                        }}>
+                          {schedule.scriptCode.length > 200 
+                            ? schedule.scriptCode.substring(0, 200) + '...' 
+                            : schedule.scriptCode
+                          }
+                        </pre>
+                      </div>
+                    )}
+
+                    {schedule.executions !== undefined && (
+                      <div style={{ 
+                        marginTop: '15px', 
+                        display: 'flex', 
+                        gap: '20px',
+                        fontSize: '12px',
+                        color: '#666'
+                      }}>
+                        <span>Executions: <strong>{schedule.executions}</strong></span>
+                        {schedule.lastResult && (
+                          <span>Status: <strong style={{ color: schedule.lastResult.success ? '#28a745' : '#dc3545' }}>
+                            {schedule.lastResult.success ? 'Success' : 'Failed'}
+                          </strong></span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Schedule Creation/Edit Modal */}
+      {isScheduleModalOpen && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100%', 
+          height: '100%', 
+          backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{ 
+            backgroundColor: 'white', 
+            padding: '30px', 
+            borderRadius: '8px', 
+            width: '90%', 
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{ marginBottom: '20px', color: '#495057' }}>
+              {selectedSchedule ? 'Edit Cron Schedule' : 'Create New Cron Schedule'}
+            </h3>
+            
+            <form onSubmit={handleScheduleSubmit}>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Schedule Name:
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={scheduleFormData.name}
+                  onChange={handleScheduleInputChange}
+                  placeholder="Enter schedule name (e.g., daily-cleanup)"
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px', 
+                    border: '1px solid #ccc', 
+                    borderRadius: '4px'
+                  }}
+                  required
+                  disabled={selectedSchedule} // Name cannot be changed when editing
+                />
+                {selectedSchedule && (
+                  <div style={{ fontSize: '11px', color: '#6c757d', marginTop: '5px' }}>
+                    Schedule name cannot be changed when editing
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Cron Expression:
+                </label>
+                <input
+                  type="text"
+                  name="cronExpression"
+                  value={scheduleFormData.cronExpression}
+                  onChange={handleScheduleInputChange}
+                  placeholder="* * * * *"
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px', 
+                    border: '1px solid #ccc', 
+                    borderRadius: '4px',
+                    fontFamily: 'monospace'
+                  }}
+                  required
+                />
+                <div style={{ marginTop: '8px', fontSize: '11px', color: '#6c757d' }}>
+                  <div><strong>Format:</strong> minute hour day-of-month month day-of-week</div>
+                  <div style={{ marginTop: '4px' }}>
+                    <strong>Examples:</strong><br/>
+                    • <code>*/5 * * * *</code> - Every 5 minutes<br/>
+                    • <code>0 9 * * *</code> - Daily at 9:00 AM<br/>
+                    • <code>0 9 * * 1</code> - Every Monday at 9:00 AM<br/>
+                    • <code>0 0 1 * *</code> - First day of every month
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  JavaScript Code:
+                </label>
+                <textarea
+                  name="scriptCode"
+                  value={scheduleFormData.scriptCode}
+                  onChange={handleScheduleInputChange}
+                  placeholder="// Your JavaScript code here&#10;console.log('Scheduled script executed at', new Date());"
+                  rows="12"
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px', 
+                    border: '1px solid #ccc', 
+                    borderRadius: '4px',
+                    fontFamily: 'Consolas, Monaco, monospace',
+                    fontSize: '13px',
+                    lineHeight: '1.4'
+                  }}
+                  required
+                />
+                <div style={{ marginTop: '8px', fontSize: '11px', color: '#6c757d' }}>
+                  The script will have access to api, utils, and console objects for HTTP requests and logging.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button 
+                  type="button" 
+                  onClick={resetScheduleForm}
+                  style={{ 
+                    padding: '10px 20px', 
+                    backgroundColor: '#6c757d', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '4px'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  style={{ 
+                    padding: '10px 20px', 
+                    backgroundColor: '#28a745', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '4px'
+                  }}
+                >
+                  {loading ? 'Saving...' : (selectedSchedule ? 'Update Schedule' : 'Create Schedule')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal for Create/Edit Script */}
       {isModalOpen && (
