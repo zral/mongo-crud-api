@@ -1,6 +1,6 @@
 const http = require('http');
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = 'http://localhost:3003';
 
 // Helper function to make HTTP requests
 function makeRequest(method, path, data = null) {

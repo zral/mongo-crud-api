@@ -24,6 +24,15 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 - **MongoDB-Style Filtering**: Complex document filtering for selective webhook triggering
 - **Comprehensive Management**: Full CRUD operations for webhook configuration
 
+### **JavaScript Automation Engine**
+- **Event-Driven Scripts**: JavaScript snippets triggered by database operations (create, update, delete)
+- **Secure Execution**: VM sandboxing with 30-second timeout protection
+- **API Integration**: Built-in HTTP client for making API calls to any collection
+- **Advanced Filtering**: MongoDB-style filters for selective script execution
+- **Rate Limiting**: Configurable execution limits with exponential backoff retry
+- **Real-time Testing**: Test scripts with sample data before deployment
+- **Comprehensive Logging**: Built-in utility functions for debugging and monitoring
+
 ### **SDK Generation & Documentation**
 - **TypeScript SDK Generation**: Auto-generated type-safe client libraries
 - **OpenAPI/Swagger Specification**: Complete API documentation with interactive explorer
@@ -42,6 +51,7 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 ### **Modern Web Interface**
 - **React Frontend**: Modern web interface with responsive design
 - **Real-time Management**: Live webhook and collection management
+- **JavaScript Script Editor**: Code editor with syntax highlighting for automation scripts
 - **Bulk Data Upload Interface**: Drag-and-drop file upload with preview functionality
 - **Data Import Wizard**: Step-by-step guide for CSV/Excel imports with validation
 - **Rate Limit Configuration**: Visual rate limit setup with validation
@@ -139,6 +149,19 @@ PUT    /api/webhooks/{id}             # Update webhook and rate limits
 DELETE /api/webhooks/{id}             # Delete webhook
 POST   /api/webhooks/{id}/test        # Test webhook delivery
 GET    /api/webhooks/stats            # Get delivery statistics
+```
+
+### **JavaScript Scripts API**
+
+```http
+GET    /api/scripts                   # List all automation scripts
+POST   /api/scripts                   # Create new automation script
+GET    /api/scripts/{id}              # Get specific script details
+PUT    /api/scripts/{id}              # Update script code and configuration
+DELETE /api/scripts/{id}              # Delete script
+POST   /api/scripts/{id}/test         # Test script execution with sample data
+GET    /api/scripts/stats             # Get script execution statistics
+POST   /api/scripts/clear-rate-limits # Clear rate limits for all scripts
 ```
 
 ### **SDK Generation & Documentation API**
@@ -393,6 +416,295 @@ curl http://localhost:3003/api/webhooks/stats
 - `$regex` - Regular expression match
 - `$exists` - Field exists
 
+## ⚡ JavaScript Automation Engine
+
+The MongoDB CRUD API includes a powerful JavaScript automation engine that allows you to execute custom JavaScript snippets in response to database operations. This feature enables real-time data processing, validation, transformations, and business logic automation.
+
+### **Key Features**
+
+- **Event-Driven Execution**: Scripts automatically triggered by CREATE, UPDATE, DELETE operations
+- **Secure VM Sandboxing**: Scripts run in isolated Node.js VM with 30-second timeout protection
+- **Built-in API Client**: Make HTTP calls to any collection endpoint within your scripts
+- **Advanced Filtering**: MongoDB-style filters for selective script execution
+- **Rate Limiting**: Configurable execution limits with exponential backoff retry
+- **Real-time Testing**: Test scripts with sample data before deployment
+- **Comprehensive Logging**: Built-in utility functions for debugging and monitoring
+
+### **Script Management API**
+
+```http
+GET    /api/scripts           # Get all scripts
+POST   /api/scripts           # Create new script
+GET    /api/scripts/{id}      # Get script by ID
+PUT    /api/scripts/{id}      # Update script
+DELETE /api/scripts/{id}      # Delete script
+POST   /api/scripts/{id}/test # Test script execution
+GET    /api/scripts/stats     # Get execution statistics
+POST   /api/scripts/clear-rate-limits # Clear rate limits
+```
+
+### **Creating JavaScript Scripts**
+
+```bash
+# Create a new automation script
+curl -X POST http://localhost:3003/api/scripts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "User Welcome Email",
+    "description": "Send welcome email when new user is created",
+    "collection": "users",
+    "events": ["create"],
+    "filters": {"verified": true},
+    "enabled": true,
+    "code": "// Welcome email script\nutils.log('\''Processing new user:'\'', payload.data.document.email);\n\n// Send welcome email\nconst emailData = {\n  to: payload.data.document.email,\n  subject: '\''Welcome!'\'',\n  template: '\''welcome'\''\n};\n\ntry {\n  const result = await api.post('\''/api/notifications'\'', emailData);\n  utils.log('\''Email sent successfully:'\'', result.data);\n  return { success: true, emailId: result.data._id };\n} catch (error) {\n  utils.error('\''Failed to send email:'\'', error.message);\n  return { success: false, error: error.message };\n}",
+    "rateLimit": {
+      "maxExecutionsPerMinute": 30,
+      "maxRetries": 3,
+      "baseDelayMs": 1000,
+      "maxDelayMs": 30000
+    }
+  }'
+```
+
+### **Script Execution Context**
+
+Each script runs with access to the following objects:
+
+#### **`payload`** - Event Data
+```javascript
+{
+  "event": "create|update|delete",
+  "collection": "collection-name", 
+  "timestamp": "2025-09-03T10:30:00.000Z",
+  "data": {
+    "document": { /* current document */ },
+    "oldDocument": { /* previous document (update/delete only) */ }
+  }
+}
+```
+
+#### **`api`** - HTTP Client
+```javascript
+// GET request
+const users = await api.get('/api/users?limit=10');
+
+// POST request  
+const newDoc = await api.post('/api/notifications', {
+  message: "Hello World",
+  type: "info"
+});
+
+// PUT request
+const updated = await api.put('/api/users/123', {
+  lastLogin: new Date()
+});
+
+// DELETE request
+await api.delete('/api/temp_data/456');
+```
+
+#### **`utils`** - Utility Functions
+```javascript
+// Logging
+utils.log('Info message', data);
+utils.error('Error message', error);
+
+// Timestamps
+const now = utils.now();           // ISO string
+const timestamp = utils.timestamp(); // Unix timestamp
+```
+
+### **Example Scripts**
+
+#### **Data Validation & Enhancement**
+```javascript
+// Validate and enhance user data on creation
+if (payload.event === 'create' && payload.collection === 'users') {
+  const user = payload.data.document;
+  
+  // Validate email domain
+  if (!user.email.endsWith('@company.com')) {
+    utils.error('Invalid email domain:', user.email);
+    return { success: false, error: 'Invalid email domain' };
+  }
+  
+  // Add user profile data
+  const profileData = {
+    userId: user._id,
+    createdAt: utils.timestamp(),
+    status: 'active',
+    preferences: {
+      notifications: true,
+      theme: 'light'
+    }
+  };
+  
+  try {
+    const profile = await api.post('/api/user_profiles', profileData);
+    utils.log('User profile created:', profile.data._id);
+    return { success: true, profileId: profile.data._id };
+  } catch (error) {
+    utils.error('Failed to create profile:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+```
+
+#### **Cross-Collection Updates**
+```javascript
+// Update related documents when order status changes
+if (payload.event === 'update' && payload.collection === 'orders') {
+  const newOrder = payload.data.document;
+  const oldOrder = payload.data.oldDocument;
+  
+  // Check if status changed to 'completed'
+  if (oldOrder.status !== 'completed' && newOrder.status === 'completed') {
+    utils.log('Order completed:', newOrder._id);
+    
+    // Update customer statistics
+    try {
+      const customer = await api.get(`/api/customers/${newOrder.customerId}`);
+      const updatedStats = {
+        totalOrders: (customer.data.totalOrders || 0) + 1,
+        totalSpent: (customer.data.totalSpent || 0) + newOrder.total,
+        lastOrderDate: utils.now()
+      };
+      
+      await api.put(`/api/customers/${newOrder.customerId}`, updatedStats);
+      utils.log('Customer stats updated for:', newOrder.customerId);
+      
+      return { success: true, customerUpdated: true };
+    } catch (error) {
+      utils.error('Failed to update customer stats:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+}
+```
+
+#### **Audit Logging**
+```javascript
+// Create audit log for sensitive operations
+if (['users', 'admin_settings', 'permissions'].includes(payload.collection)) {
+  const auditEntry = {
+    collection: payload.collection,
+    operation: payload.event,
+    documentId: payload.data.document._id,
+    timestamp: utils.timestamp(),
+    changes: payload.event === 'update' ? {
+      before: payload.data.oldDocument,
+      after: payload.data.document
+    } : null
+  };
+  
+  try {
+    await api.post('/api/audit_logs', auditEntry);
+    utils.log('Audit log created for:', payload.collection);
+    return { success: true, audited: true };
+  } catch (error) {
+    utils.error('Failed to create audit log:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+```
+
+#### **Real-time Notifications**
+```javascript
+// Send real-time notifications for important events
+if (payload.collection === 'support_tickets' && payload.event === 'create') {
+  const ticket = payload.data.document;
+  
+  // High priority ticket notification
+  if (ticket.priority === 'high') {
+    const notification = {
+      type: 'urgent_ticket',
+      title: 'High Priority Support Ticket',
+      message: `New high priority ticket #${ticket.number}: ${ticket.subject}`,
+      userId: ticket.assignedTo,
+      metadata: {
+        ticketId: ticket._id,
+        priority: ticket.priority
+      },
+      timestamp: utils.now()
+    };
+    
+    try {
+      await api.post('/api/notifications', notification);
+      utils.log('Urgent notification sent for ticket:', ticket._id);
+      return { success: true, notificationSent: true };
+    } catch (error) {
+      utils.error('Failed to send notification:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+}
+```
+
+### **Script Statistics and Monitoring**
+
+Monitor script performance and execution statistics:
+
+```bash
+curl http://localhost:3003/api/scripts/stats
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "executionStats": {
+      "totalScripts": 15,
+      "activeScripts": 12,
+      "totalExecutions": 1543,
+      "queuedRetries": 2
+    },
+    "rateLimit": {
+      "maxExecutionsPerMinute": 60,
+      "windowMs": 60000,
+      "maxRetries": 3,
+      "baseDelayMs": 1000,
+      "maxDelayMs": 30000
+    }
+  }
+}
+```
+
+### **Error Handling & Best Practices**
+
+1. **Always handle API errors**:
+```javascript
+try {
+  const result = await api.post('/api/collection', data);
+  return { success: true, data: result.data };
+} catch (error) {
+  utils.error('Operation failed:', error.message);
+  return { success: false, error: error.message };
+}
+```
+
+2. **Use appropriate logging**:
+```javascript
+utils.log('Processing document:', payload.data.document._id);
+utils.error('Validation failed:', validationError);
+```
+
+3. **Return meaningful results**:
+```javascript
+return { 
+  success: true, 
+  processed: true, 
+  timestamp: utils.now(),
+  details: 'Email sent successfully'
+};
+```
+
+4. **Implement filtering for efficiency**:
+```json
+{
+  "filters": {"status": "active", "verified": true}
+}
+```
+
 ## 🛠️ SDK Generation & Developer Tools
 
 ### **Auto-Generated TypeScript SDKs**
@@ -513,6 +825,16 @@ The React frontend provides comprehensive management capabilities with a profess
 - **Testing Tools**: Built-in webhook testing and validation
 - **Statistics Dashboard**: Real-time delivery statistics and performance metrics
 - **Status Management**: Enable/disable webhooks with visual indicators
+
+#### **JavaScript Scripts Interface**
+- **Code Editor**: Full-featured JavaScript editor with syntax highlighting
+- **Script Management**: Create, edit, delete, and organize automation scripts
+- **Real-time Testing**: Test scripts with sample data before deployment
+- **Event Configuration**: Visual setup for event triggers (create, update, delete)
+- **Collection Filtering**: Select specific collections or apply to all collections
+- **Rate Limit Configuration**: Configurable execution limits with retry settings
+- **Execution Statistics**: Monitor script performance and execution counts
+- **Error Handling**: Comprehensive error display and debugging information
 
 #### **Advanced UI Features**
 - **Rate Limit Configuration**: Visual rate limit setup with tooltips and validation

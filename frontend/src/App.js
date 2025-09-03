@@ -4,7 +4,8 @@ import { Toaster } from 'react-hot-toast';
 import ManagementInterface from './components/ManagementInterface';
 import CollectionInterface from './components/CollectionInterface';
 import WebhookInterface from './components/WebhookInterface';
-import { Database, Settings, Webhook } from 'lucide-react';
+import ScriptInterface from './components/ScriptInterface';
+import { Database, Settings, Webhook, Code } from 'lucide-react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('collections');
@@ -44,12 +45,20 @@ function App() {
               <Webhook size={20} />
               Webhooks
             </button>
+            <button
+              className={`nav-tab ${activeTab === 'scripts' ? 'active' : ''}`}
+              onClick={() => setActiveTab('scripts')}
+            >
+              <Code size={20} />
+              Scripts
+            </button>
           </nav>
 
           <main>
             {activeTab === 'collections' && <CollectionInterface />}
             {activeTab === 'management' && <ManagementInterface />}
             {activeTab === 'webhooks' && <WebhookInterface />}
+            {activeTab === 'scripts' && <ScriptInterface />}
           </main>
         </div>
       </div>

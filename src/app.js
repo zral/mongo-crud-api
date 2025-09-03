@@ -12,6 +12,7 @@ const SDKGeneratorService = require('./services/sdkGenerator');
 const collectionRoutes = require('./routes/collections');
 const managementRoutes = require('./routes/management');
 const webhookRoutes = require('./routes/webhooks');
+const scriptRoutes = require('./routes/scripts');
 const sdkRoutes = require('./routes/sdk');
 const bulkDataRoutes = require('./routes/bulkData');
 const errorHandler = require('./middleware/errorHandler');
@@ -38,6 +39,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/management', managementRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/scripts', scriptRoutes);
 app.use('/api/sdk', sdkRoutes);
 app.use('/api/bulk', bulkDataRoutes);
 app.use('/api', collectionRoutes);

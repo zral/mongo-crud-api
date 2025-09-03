@@ -23,6 +23,16 @@ This project has successfully implemented a comprehensive Node.js REST API that 
 - **Delivery Statistics**: Comprehensive webhook performance monitoring
 - **Management UI**: Full-featured frontend for webhook configuration
 
+### ⚡ JavaScript Automation Engine (NEW!)
+- **Custom Script Execution**: Run JavaScript code in response to database operations
+- **Event-Driven Triggers**: Scripts execute on create, update, delete events
+- **Secure VM Sandboxing**: Scripts run in isolated Node.js VM with timeout protection
+- **Built-in API Client**: HTTP client for making requests to collection endpoints
+- **Advanced Filtering**: MongoDB-style filters for selective script execution
+- **Rate Limiting**: Configurable execution limits with exponential backoff
+- **Real-time Testing**: Test scripts with sample data before deployment
+- **Management Interface**: Full-featured frontend for script management
+
 ### 🛡️ Production-Ready Features
 - **Database Resilience**: Connection retry logic with exponential backoff
 - **Rate Limiting**: Configurable rate limiting to prevent abuse
@@ -86,6 +96,16 @@ This project has successfully implemented a comprehensive Node.js REST API that 
 - `POST /api/webhooks/{id}/test` - Test webhook delivery
 - `GET /api/webhooks/stats` - Get delivery statistics and performance metrics
 
+### JavaScript Scripts API (NEW!)
+- `GET /api/scripts` - List all automation scripts
+- `POST /api/scripts` - Create new automation script
+- `GET /api/scripts/{id}` - Get script details
+- `PUT /api/scripts/{id}` - Update script configuration
+- `DELETE /api/scripts/{id}` - Delete script
+- `POST /api/scripts/{id}/test` - Test script execution with sample data
+- `GET /api/scripts/stats` - Get execution statistics and performance metrics
+- `POST /api/scripts/clear-rate-limits` - Clear rate limit counters for all scripts
+
 ### Management API
 - `GET /api/management/collections` - List all collections with metadata
 - `POST /api/management/collections` - Create new collection
@@ -101,6 +121,29 @@ This project has successfully implemented a comprehensive Node.js REST API that 
 - `GET /api/sdk/docs` - Interactive Swagger UI documentation
 
 ## 🎯 Advanced Features
+
+### JavaScript Script Configuration
+```json
+POST /api/scripts
+{
+  "name": "User Profile Creator",
+  "description": "Creates user profile when new user is registered",
+  "collection": "users",
+  "events": ["create"],
+  "filters": {
+    "verified": true,
+    "status": "active"
+  },
+  "code": "if (payload.event === 'create') { /* Your JavaScript code */ }",
+  "rateLimit": {
+    "maxExecutionsPerMinute": 60,
+    "maxRetries": 3,
+    "baseDelayMs": 1000,
+    "maxDelayMs": 30000
+  },
+  "enabled": true
+}
+```
 
 ### Webhook Configuration
 ```json

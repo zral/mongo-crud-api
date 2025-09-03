@@ -3,7 +3,9 @@
 const axios = require('axios');
 const chalk = require('chalk');
 
-const API_BASE = 'http://localhost:3001';
+const http = require('http');
+
+const API_BASE = 'http://localhost:3003';
 const FRONTEND_BASE = 'http://localhost:3002';
 
 async function testCompleteSystem() {

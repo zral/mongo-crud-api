@@ -1,5 +1,6 @@
 const { MongoClient, ObjectId } = require('mongodb');
 const WebhookDeliveryService = require('./webhookDelivery');
+const ScriptExecutionService = require('./scriptExecution');
 
 class DatabaseService {
   constructor() {
@@ -12,6 +13,7 @@ class DatabaseService {
     this.maxReconnectDelay = 30000; // Max 30 seconds
     this.connectionMonitorInterval = null;
     this.webhookDelivery = new WebhookDeliveryService();
+    this.scriptExecution = new ScriptExecutionService();
   }
 
   async connect() {
@@ -398,6 +400,7 @@ class DatabaseService {
       // Trigger webhooks for create operation
       setImmediate(() => {
         this.triggerWebhooksForOperation(collectionName, 'create', insertedDoc);
+        this.triggerScriptsForOperation(collectionName, 'create', insertedDoc);
       });
       
       return insertedDoc;
@@ -434,6 +437,7 @@ class DatabaseService {
       // Trigger webhooks for update operation
       setImmediate(() => {
         this.triggerWebhooksForOperation(collectionName, 'update', result, oldDocument);
+        this.triggerScriptsForOperation(collectionName, 'update', result, oldDocument);
       });
 
       return result;
@@ -454,6 +458,7 @@ class DatabaseService {
       // Trigger webhooks for delete operation
       setImmediate(() => {
         this.triggerWebhooksForOperation(collectionName, 'delete', null, result);
+        this.triggerScriptsForOperation(collectionName, 'delete', null, result);
       });
 
       return result;
@@ -702,6 +707,109 @@ class DatabaseService {
     } catch (error) {
       console.error(`Failed to trigger webhooks for ${event} on ${collectionName}:`, error.message);
     }
+  }
+
+  // Script management functions
+  async triggerScriptsForOperation(collectionName, event, document, oldDocument = null) {
+    try {
+      const scripts = await this.getScriptsForCollection(collectionName, event);
+      
+      if (scripts.length === 0) {
+        return;
+      }
+
+      console.log(`Triggering ${scripts.length} scripts for ${event} on ${collectionName}`);
+
+      // Use Promise.allSettled to ensure one failed script doesn't block others
+      const promises = scripts.map(async (script) => {
+        try {
+          // Check if document matches script filters
+          const documentToCheck = event === 'delete' ? oldDocument : document;
+          if (!this.matchesFilter(documentToCheck, script.filters)) {
+            console.log(`Document doesn't match filters for script ${script.name}`);
+            return;
+          }
+
+          const payload = {
+            event,
+            script: {
+              id: script._id,
+              name: script.name
+            },
+            collection: collectionName,
+            timestamp: new Date().toISOString(),
+            data: {
+              document: document,
+              ...(oldDocument && { oldDocument })
+            }
+          };
+
+          // Execute the script with rate limiting and retry
+          await this.scriptExecution.executeScriptWithRetry(script, payload);
+        } catch (error) {
+          console.error(`Failed to execute script ${script.name}:`, error.message);
+        }
+      });
+
+      await Promise.allSettled(promises);
+    } catch (error) {
+      console.error(`Failed to trigger scripts for ${event} on ${collectionName}:`, error.message);
+    }
+  }
+
+  async getAllScripts() {
+    return await this.executeWithRetry(async () => {
+      const collection = this.db.collection('_scripts');
+      return await collection.find({}).toArray();
+    }, 'get all scripts');
+  }
+
+  async createScript(script) {
+    return await this.executeWithRetry(async () => {
+      const collection = this.db.collection('_scripts');
+      const result = await collection.insertOne(script);
+      return await collection.findOne({ _id: result.insertedId });
+    }, 'create script');
+  }
+
+  async getScriptById(id) {
+    return await this.executeWithRetry(async () => {
+      const collection = this.db.collection('_scripts');
+      const objectId = this.toObjectId(id);
+      return await collection.findOne({ _id: objectId });
+    }, 'get script by id');
+  }
+
+  async updateScript(id, update) {
+    return await this.executeWithRetry(async () => {
+      const collection = this.db.collection('_scripts');
+      const objectId = this.toObjectId(id);
+      return await collection.updateOne({ _id: objectId }, { $set: update });
+    }, 'update script');
+  }
+
+  async deleteScript(id) {
+    return await this.executeWithRetry(async () => {
+      const collection = this.db.collection('_scripts');
+      const objectId = this.toObjectId(id);
+      return await collection.deleteOne({ _id: objectId });
+    }, 'delete script');
+  }
+
+  async getScriptsForCollection(collectionName, event = null) {
+    return await this.executeWithRetry(async () => {
+      const collection = this.db.collection('_scripts');
+      const query = {
+        collection: collectionName,
+        enabled: true
+      };
+      
+      if (event) {
+        query.events = { $in: [event] };
+      }
+      
+      return await collection.find(query).toArray();
+    }, 'get scripts for collection');
   }
 }
 
