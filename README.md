@@ -1207,6 +1207,7 @@ MongoCRUD/
 - **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)**: High-level project overview
 - **[WEBHOOKS_SUMMARY.md](WEBHOOKS_SUMMARY.md)**: Comprehensive webhook documentation
 - **[COLLECTION_FILTERING_SUMMARY.md](COLLECTION_FILTERING_SUMMARY.md)**: Advanced filtering guide
+- **[SCRIPTS_DOCUMENTATION.md](SCRIPTS_DOCUMENTATION.md)**: JavaScript automation engine guide
 
 ## 🤝 Contributing
 
