@@ -362,6 +362,21 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                       <span><strong>Collection:</strong> {script.collection || 'All'}</span>
                       <span style={{ marginLeft: '20px' }}><strong>Events:</strong> {script.events?.join(', ') || 'None'}</span>
                     </div>
+                    {script.rateLimit && (
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: '#495057', 
+                        marginTop: '8px',
+                        padding: '6px 8px',
+                        backgroundColor: '#e9ecef',
+                        borderRadius: '3px',
+                        border: '1px solid #dee2e6'
+                      }}>
+                        <strong>⚡ Rate Limit:</strong> {script.rateLimit.maxExecutionsPerMinute}/min
+                        <span style={{ marginLeft: '12px' }}><strong>Retries:</strong> {script.rateLimit.maxRetries}</span>
+                        <span style={{ marginLeft: '12px' }}><strong>Delay:</strong> {script.rateLimit.baseDelayMs}ms - {script.rateLimit.maxDelayMs}ms</span>
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button
@@ -558,6 +573,108 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                   />
                   <span style={{ fontWeight: 'bold' }}>Enabled</span>
                 </label>
+              </div>
+
+              {/* Rate Limiting Configuration */}
+              <div style={{ 
+                marginBottom: '15px', 
+                padding: '15px', 
+                border: '1px solid #e0e0e0', 
+                borderRadius: '6px',
+                backgroundColor: '#f8f9fa'
+              }}>
+                <h4 style={{ marginBottom: '10px', color: '#495057' }}>⚡ Rate Limiting Configuration</h4>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
+                      Max Executions/Minute:
+                    </label>
+                    <input
+                      type="number"
+                      name="rateLimit.maxExecutionsPerMinute"
+                      value={formData.rateLimit.maxExecutionsPerMinute}
+                      onChange={handleInputChange}
+                      min="1"
+                      max="1000"
+                      style={{ 
+                        width: '100%', 
+                        padding: '6px', 
+                        border: '1px solid #ccc', 
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
+                      Max Retries:
+                    </label>
+                    <input
+                      type="number"
+                      name="rateLimit.maxRetries"
+                      value={formData.rateLimit.maxRetries}
+                      onChange={handleInputChange}
+                      min="0"
+                      max="10"
+                      style={{ 
+                        width: '100%', 
+                        padding: '6px', 
+                        border: '1px solid #ccc', 
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
+                      Base Delay (ms):
+                    </label>
+                    <input
+                      type="number"
+                      name="rateLimit.baseDelayMs"
+                      value={formData.rateLimit.baseDelayMs}
+                      onChange={handleInputChange}
+                      min="100"
+                      max="10000"
+                      step="100"
+                      style={{ 
+                        width: '100%', 
+                        padding: '6px', 
+                        border: '1px solid #ccc', 
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
+                      Max Delay (ms):
+                    </label>
+                    <input
+                      type="number"
+                      name="rateLimit.maxDelayMs"
+                      value={formData.rateLimit.maxDelayMs}
+                      onChange={handleInputChange}
+                      min="1000"
+                      max="60000"
+                      step="1000"
+                      style={{ 
+                        width: '100%', 
+                        padding: '6px', 
+                        border: '1px solid #ccc', 
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '8px', fontSize: '11px', color: '#6c757d' }}>
+                  <strong>Rate Limiting:</strong> Controls script execution frequency and retry behavior. 
+                  Higher values allow more frequent execution but may impact performance.
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
