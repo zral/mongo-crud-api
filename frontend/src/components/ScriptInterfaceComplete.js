@@ -275,6 +275,20 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
             Create New Script
           </button>
           <button 
+            onClick={loadScriptStats}
+            style={{ 
+              padding: '10px 20px', 
+              backgroundColor: '#6c757d', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px',
+              marginRight: '10px'
+            }}
+            disabled={loading}
+          >
+            Refresh Stats
+          </button>
+          <button 
             onClick={clearRateLimits}
             style={{ 
               padding: '10px 20px', 
@@ -302,118 +316,24 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
         </div>
       )}
 
-      {/* Enhanced Statistics Section */}
+      {/* Statistics Section */}
       {scriptStats && (
-        <div style={{ marginBottom: '20px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0, color: '#495057' }}>📊 Script Execution Statistics</h3>
-            <button
-              onClick={loadScriptStats}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '12px'
-              }}
-            >
-              🔄 Refresh
-            </button>
-          </div>
-          
-          {/* Main Statistics Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', marginBottom: '20px' }}>
-            <div style={{ padding: '12px', backgroundColor: '#e3f2fd', borderRadius: '6px', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1565c0' }}>
-                {scriptStats.data?.executionStats?.totalExecutions?.toLocaleString() || 0}
-              </div>
-              <div style={{ fontSize: '12px', color: '#666' }}>Total Executions</div>
+        <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+          <h3>Script Statistics</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+            <div>
+              <strong>Total Scripts:</strong> {scriptStats.data?.executionStats?.totalScripts || 0}
             </div>
-            
-            <div style={{ padding: '12px', backgroundColor: '#e8f5e8', borderRadius: '6px', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2e7d32' }}>
-                {scriptStats.data?.executionStats?.successfulExecutions?.toLocaleString() || 0}
-              </div>
-              <div style={{ fontSize: '12px', color: '#666' }}>Successful</div>
+            <div>
+              <strong>Active Scripts:</strong> {scriptStats.data?.executionStats?.activeScripts || 0}
             </div>
-            
-            <div style={{ padding: '12px', backgroundColor: '#ffebee', borderRadius: '6px', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#c62828' }}>
-                {scriptStats.data?.executionStats?.failedExecutions?.toLocaleString() || 0}
-              </div>
-              <div style={{ fontSize: '12px', color: '#666' }}>Failed</div>
+            <div>
+              <strong>Total Executions:</strong> {scriptStats.data?.executionStats?.totalExecutions || 0}
             </div>
-            
-            <div style={{ padding: '12px', backgroundColor: '#fff3e0', borderRadius: '6px', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef6c00' }}>
-                {scriptStats.data?.executionStats?.successRate || 0}%
-              </div>
-              <div style={{ fontSize: '12px', color: '#666' }}>Success Rate</div>
-            </div>
-          </div>
-          
-          {/* Time-based Statistics */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginBottom: '20px' }}>
-            <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e9ecef' }}>
-              <strong>Today:</strong> {scriptStats.data?.executionStats?.executionsToday?.toLocaleString() || 0}
-            </div>
-            <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e9ecef' }}>
-              <strong>This Week:</strong> {scriptStats.data?.executionStats?.executionsThisWeek?.toLocaleString() || 0}
-            </div>
-            <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e9ecef' }}>
-              <strong>This Month:</strong> {scriptStats.data?.executionStats?.executionsThisMonth?.toLocaleString() || 0}
-            </div>
-            <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e9ecef' }}>
-              <strong>Avg Time:</strong> {scriptStats.data?.executionStats?.averageExecutionTime || 0}ms
-            </div>
-          </div>
-          
-          {/* Performance Metrics */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
-            <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e9ecef' }}>
-              <strong>Active Scripts:</strong> {scriptStats.data?.executionStats?.activeScripts || 0} / {scriptStats.data?.executionStats?.totalScripts || 0}
-            </div>
-            <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e9ecef' }}>
-              <strong>Peak Executions/min:</strong> {scriptStats.data?.executionStats?.peakExecutionsPerMinute || 0}
-            </div>
-            <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e9ecef' }}>
-              <strong>Recent Executions:</strong> {scriptStats.data?.executionStats?.recentExecutions || 0}
-            </div>
-            <div style={{ padding: '10px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e9ecef' }}>
+            <div>
               <strong>Queued Retries:</strong> {scriptStats.data?.executionStats?.queuedRetries || 0}
             </div>
           </div>
-          
-          {/* Top Scripts */}
-          {scriptStats.data?.executionStats?.topScripts && scriptStats.data.executionStats.topScripts.length > 0 && (
-            <div style={{ padding: '15px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e9ecef' }}>
-              <h4 style={{ margin: '0 0 10px 0', color: '#495057' }}>🏆 Top Executed Scripts</h4>
-              <div style={{ display: 'grid', gap: '8px' }}>
-                {scriptStats.data.executionStats.topScripts.map((script, index) => (
-                  <div key={script.scriptId} style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    padding: '8px 12px', 
-                    backgroundColor: index === 0 ? '#fff3cd' : '#f8f9fa',
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}>
-                    <span>{script.scriptId}</span>
-                    <span style={{ fontWeight: 'bold', color: '#007bff' }}>{script.executions.toLocaleString()} executions</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Last Execution Info */}
-          {scriptStats.data?.executionStats?.lastExecution && (
-            <div style={{ marginTop: '15px', padding: '10px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e9ecef', fontSize: '14px', color: '#666' }}>
-              <strong>Last Execution:</strong> {new Date(scriptStats.data.executionStats.lastExecution).toLocaleString()}
-            </div>
-          )}
         </div>
       )}
 
@@ -442,21 +362,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                       <span><strong>Collection:</strong> {script.collection || 'All'}</span>
                       <span style={{ marginLeft: '20px' }}><strong>Events:</strong> {script.events?.join(', ') || 'None'}</span>
                     </div>
-                    {script.rateLimit && (
-                      <div style={{ 
-                        fontSize: '12px', 
-                        color: '#495057', 
-                        marginTop: '8px',
-                        padding: '6px 8px',
-                        backgroundColor: '#e9ecef',
-                        borderRadius: '3px',
-                        border: '1px solid #dee2e6'
-                      }}>
-                        <strong>⚡ Rate Limit:</strong> {script.rateLimit.maxExecutionsPerMinute}/min
-                        <span style={{ marginLeft: '12px' }}><strong>Retries:</strong> {script.rateLimit.maxRetries}</span>
-                        <span style={{ marginLeft: '12px' }}><strong>Delay:</strong> {script.rateLimit.baseDelayMs}ms - {script.rateLimit.maxDelayMs}ms</span>
-                      </div>
-                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button
@@ -653,108 +558,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                   />
                   <span style={{ fontWeight: 'bold' }}>Enabled</span>
                 </label>
-              </div>
-
-              {/* Rate Limiting Configuration */}
-              <div style={{ 
-                marginBottom: '15px', 
-                padding: '15px', 
-                border: '1px solid #e0e0e0', 
-                borderRadius: '6px',
-                backgroundColor: '#f8f9fa'
-              }}>
-                <h4 style={{ marginBottom: '10px', color: '#495057' }}>⚡ Rate Limiting Configuration</h4>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
-                      Max Executions/Minute:
-                    </label>
-                    <input
-                      type="number"
-                      name="rateLimit.maxExecutionsPerMinute"
-                      value={formData.rateLimit.maxExecutionsPerMinute}
-                      onChange={handleInputChange}
-                      min="1"
-                      max="1000"
-                      style={{ 
-                        width: '100%', 
-                        padding: '6px', 
-                        border: '1px solid #ccc', 
-                        borderRadius: '4px'
-                      }}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
-                      Max Retries:
-                    </label>
-                    <input
-                      type="number"
-                      name="rateLimit.maxRetries"
-                      value={formData.rateLimit.maxRetries}
-                      onChange={handleInputChange}
-                      min="0"
-                      max="10"
-                      style={{ 
-                        width: '100%', 
-                        padding: '6px', 
-                        border: '1px solid #ccc', 
-                        borderRadius: '4px'
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
-                      Base Delay (ms):
-                    </label>
-                    <input
-                      type="number"
-                      name="rateLimit.baseDelayMs"
-                      value={formData.rateLimit.baseDelayMs}
-                      onChange={handleInputChange}
-                      min="100"
-                      max="10000"
-                      step="100"
-                      style={{ 
-                        width: '100%', 
-                        padding: '6px', 
-                        border: '1px solid #ccc', 
-                        borderRadius: '4px'
-                      }}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
-                      Max Delay (ms):
-                    </label>
-                    <input
-                      type="number"
-                      name="rateLimit.maxDelayMs"
-                      value={formData.rateLimit.maxDelayMs}
-                      onChange={handleInputChange}
-                      min="1000"
-                      max="60000"
-                      step="1000"
-                      style={{ 
-                        width: '100%', 
-                        padding: '6px', 
-                        border: '1px solid #ccc', 
-                        borderRadius: '4px'
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ marginTop: '8px', fontSize: '11px', color: '#6c757d' }}>
-                  <strong>Rate Limiting:</strong> Controls script execution frequency and retry behavior. 
-                  Higher values allow more frequent execution but may impact performance.
-                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

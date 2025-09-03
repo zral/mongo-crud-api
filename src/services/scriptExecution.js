@@ -11,6 +11,21 @@ class ScriptExecutionService {
     // Execution queue for failed scripts
     this.executionQueue = [];
     
+    // Persistent execution statistics
+    this.executionStats = {
+      totalExecutions: 0,
+      successfulExecutions: 0,
+      failedExecutions: 0,
+      lastExecution: null,
+      executionsToday: 0,
+      executionsThisWeek: 0,
+      executionsThisMonth: 0,
+      averageExecutionTime: 0,
+      peakExecutionsPerMinute: 0,
+      scriptExecutionCounts: new Map(), // Per-script execution counts
+      lastResetDate: new Date().toDateString()
+    };
+    
     // Rate limiting configuration (similar to webhooks)
     this.rateLimit = {
       maxExecutionsPerMinute: 60, // Max 60 executions per minute per script
@@ -26,6 +41,9 @@ class ScriptExecutionService {
     
     // Start processing retry queue
     this.startRetryProcessor();
+    
+    // Reset daily stats if needed
+    this.checkDailyReset();
   }
 
   /**
@@ -65,6 +83,85 @@ class ScriptExecutionService {
     
     const scriptData = this.rateLimitMap.get(scriptId);
     scriptData.executions.push(now);
+  }
+
+  /**
+   * Track execution statistics
+   */
+  trackExecution(scriptId, success, executionTime = 0) {
+    const now = new Date();
+    this.executionStats.totalExecutions++;
+    this.executionStats.lastExecution = now.toISOString();
+    
+    if (success) {
+      this.executionStats.successfulExecutions++;
+    } else {
+      this.executionStats.failedExecutions++;
+    }
+
+    // Update average execution time
+    if (executionTime > 0) {
+      const totalTime = this.executionStats.averageExecutionTime * (this.executionStats.totalExecutions - 1) + executionTime;
+      this.executionStats.averageExecutionTime = Math.round(totalTime / this.executionStats.totalExecutions);
+    }
+
+    // Track per-script executions
+    const scriptCount = this.executionStats.scriptExecutionCounts.get(scriptId) || 0;
+    this.executionStats.scriptExecutionCounts.set(scriptId, scriptCount + 1);
+
+    // Update daily/weekly/monthly counters
+    this.updatePeriodCounters();
+
+    // Track peak executions per minute
+    this.updatePeakExecutions();
+  }
+
+  /**
+   * Update daily, weekly, and monthly counters
+   */
+  updatePeriodCounters() {
+    const today = new Date().toDateString();
+    
+    // Reset counters if new day
+    if (this.executionStats.lastResetDate !== today) {
+      this.executionStats.executionsToday = 0;
+      this.executionStats.lastResetDate = today;
+    }
+    
+    this.executionStats.executionsToday++;
+    this.executionStats.executionsThisWeek++; // Simplified - could be more precise
+    this.executionStats.executionsThisMonth++; // Simplified - could be more precise
+  }
+
+  /**
+   * Update peak executions per minute tracking
+   */
+  updatePeakExecutions() {
+    const now = Date.now();
+    let currentMinuteExecutions = 0;
+    
+    // Count all executions across all scripts in the last minute
+    for (const [, scriptData] of this.rateLimitMap.entries()) {
+      const recentExecutions = scriptData.executions.filter(
+        timestamp => now - timestamp < 60000 // Last minute
+      );
+      currentMinuteExecutions += recentExecutions.length;
+    }
+    
+    if (currentMinuteExecutions > this.executionStats.peakExecutionsPerMinute) {
+      this.executionStats.peakExecutionsPerMinute = currentMinuteExecutions;
+    }
+  }
+
+  /**
+   * Check if daily stats need reset
+   */
+  checkDailyReset() {
+    const today = new Date().toDateString();
+    if (this.executionStats.lastResetDate !== today) {
+      this.executionStats.executionsToday = 0;
+      this.executionStats.lastResetDate = today;
+    }
   }
 
   /**
@@ -247,6 +344,7 @@ class ScriptExecutionService {
    * Execute a JavaScript snippet safely
    */
   async executeScript(script, payload, apiBaseUrl = 'http://localhost:3000') {
+    const startTime = Date.now();
     return new Promise((resolve, reject) => {
       try {
         // Create a sandbox context with limited access
@@ -259,6 +357,9 @@ class ScriptExecutionService {
         
         // Create a timeout for script execution
         const timeoutId = setTimeout(() => {
+          const executionTime = Date.now() - startTime;
+          const scriptId = script._id ? script._id.toString() : script.name;
+          this.trackExecution(scriptId, false, executionTime);
           reject({ success: false, error: 'Script execution timeout', stack: null });
         }, this.executionTimeout);
 
@@ -285,15 +386,24 @@ class ScriptExecutionService {
             });
             
             clearTimeout(timeoutId);
+            const executionTime = Date.now() - startTime;
+            const scriptId = script._id ? script._id.toString() : script.name;
+            this.trackExecution(scriptId, true, executionTime);
             resolve({ success: true, result });
           } catch (error) {
             clearTimeout(timeoutId);
+            const executionTime = Date.now() - startTime;
+            const scriptId = script._id ? script._id.toString() : script.name;
+            this.trackExecution(scriptId, false, executionTime);
             reject({ success: false, error: error.message, stack: error.stack });
           }
         };
 
         executeAsync();
       } catch (error) {
+        const executionTime = Date.now() - startTime;
+        const scriptId = script._id ? script._id.toString() : script.name;
+        this.trackExecution(scriptId, false, executionTime);
         reject({ success: false, error: error.message, stack: error.stack });
       }
     });
@@ -369,29 +479,74 @@ class ScriptExecutionService {
    * Get execution statistics
    */
   getStatistics() {
+    this.checkDailyReset(); // Ensure daily stats are current
+    
     const totalScripts = this.rateLimitMap.size;
-    let totalExecutions = 0;
+    let recentExecutions = 0;
     let activeScripts = 0;
     
     const now = Date.now();
     for (const [scriptId, data] of this.rateLimitMap.entries()) {
       // Count executions in the last minute
-      const recentExecutions = data.executions.filter(
+      const recentExecutionsList = data.executions.filter(
         timestamp => now - timestamp < this.rateLimit.windowMs
       );
-      totalExecutions += recentExecutions.length;
-      if (recentExecutions.length > 0) {
+      recentExecutions += recentExecutionsList.length;
+      if (recentExecutionsList.length > 0) {
         activeScripts++;
       }
     }
+
+    // Convert script execution counts Map to object for JSON serialization
+    const scriptExecutionCounts = {};
+    for (const [scriptId, count] of this.executionStats.scriptExecutionCounts.entries()) {
+      scriptExecutionCounts[scriptId] = count;
+    }
     
     return {
+      // Current session stats
       totalScripts,
       activeScripts,
-      totalExecutions,
+      recentExecutions, // Executions in the last minute
       queuedRetries: this.executionQueue.length,
+      
+      // Persistent execution statistics
+      totalExecutions: this.executionStats.totalExecutions,
+      successfulExecutions: this.executionStats.successfulExecutions,
+      failedExecutions: this.executionStats.failedExecutions,
+      successRate: this.executionStats.totalExecutions > 0 
+        ? Math.round((this.executionStats.successfulExecutions / this.executionStats.totalExecutions) * 100) 
+        : 0,
+      
+      // Time-based statistics
+      lastExecution: this.executionStats.lastExecution,
+      executionsToday: this.executionStats.executionsToday,
+      executionsThisWeek: this.executionStats.executionsThisWeek,
+      executionsThisMonth: this.executionStats.executionsThisMonth,
+      
+      // Performance metrics
+      averageExecutionTime: this.executionStats.averageExecutionTime,
+      peakExecutionsPerMinute: this.executionStats.peakExecutionsPerMinute,
+      
+      // Per-script statistics
+      scriptExecutionCounts,
+      topScripts: this.getTopScripts(),
+      
+      // Configuration
       rateLimit: this.rateLimit
     };
+  }
+
+  /**
+   * Get top 5 most executed scripts
+   */
+  getTopScripts() {
+    const sorted = Array.from(this.executionStats.scriptExecutionCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([scriptId, count]) => ({ scriptId, executions: count }));
+    
+    return sorted;
   }
 
   /**
