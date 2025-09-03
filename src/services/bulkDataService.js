@@ -1,5 +1,5 @@
 const csv = require('csv-parser');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const fs = require('fs');
 const path = require('path');
 const { Readable } = require('stream');
@@ -63,36 +63,52 @@ class BulkDataService {
    */
   async parseExcel(file) {
     try {
-      const workbook = XLSX.read(file.buffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0]; // Use first sheet
-      const worksheet = workbook.Sheets[sheetName];
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(file.buffer);
       
-      // Convert to JSON
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-        header: 1, // Use first row as headers
-        defval: null // Use null for empty cells
+      // Get the first worksheet
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) {
+        throw new Error('Excel file has no worksheets');
+      }
+
+      const jsonData = [];
+      let headers = [];
+      
+      // Read all rows
+      worksheet.eachRow((row, rowNumber) => {
+        const rowValues = [];
+        
+        // Get values from each cell in the row
+        row.eachCell((cell, colNumber) => {
+          rowValues[colNumber - 1] = cell.value;
+        });
+        
+        if (rowNumber === 1) {
+          // First row contains headers
+          headers = rowValues.map(val => val ? String(val).trim() : '');
+        } else {
+          // Data rows
+          const obj = {};
+          headers.forEach((header, index) => {
+            if (header && header.trim()) {
+              const cellValue = rowValues[index];
+              obj[header] = cellValue !== null && cellValue !== undefined ? cellValue : null;
+            }
+          });
+          
+          const cleanObj = this.cleanData(obj);
+          if (Object.keys(cleanObj).length > 0) {
+            jsonData.push(cleanObj);
+          }
+        }
       });
 
       if (jsonData.length === 0) {
-        throw new Error('Excel file is empty');
+        throw new Error('Excel file contains no data rows');
       }
 
-      // Extract headers from first row
-      const headers = jsonData[0];
-      const dataRows = jsonData.slice(1);
-
-      // Convert to object format
-      const results = dataRows.map(row => {
-        const obj = {};
-        headers.forEach((header, index) => {
-          if (header && header.trim()) {
-            obj[header.trim()] = row[index] !== null && row[index] !== undefined ? row[index] : null;
-          }
-        });
-        return this.cleanData(obj);
-      }).filter(obj => Object.keys(obj).length > 0);
-
-      return results;
+      return jsonData;
     } catch (error) {
       throw new Error(`Excel parsing error: ${error.message}`);
     }
