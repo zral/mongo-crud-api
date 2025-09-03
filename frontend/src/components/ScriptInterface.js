@@ -24,6 +24,11 @@ const ScriptInterface = () => {
       maxRetries: 3,
       baseDelayMs: 1000,
       maxDelayMs: 30000
+    },
+    cronSchedule: {
+      enabled: false,
+      expression: '',
+      payload: '{}'
     }
   });
 
@@ -100,6 +105,11 @@ const ScriptInterface = () => {
         maxRetries: 3,
         baseDelayMs: 1000,
         maxDelayMs: 30000
+      },
+      cronSchedule: {
+        enabled: false,
+        expression: '',
+        payload: '{}'
       }
     });
     setSelectedScript(null);
@@ -127,10 +137,32 @@ const ScriptInterface = () => {
         }
       }
 
+      // Parse cron payload if provided
+      let cronPayload = {};
+      if (formData.cronSchedule.enabled && formData.cronSchedule.payload.trim()) {
+        try {
+          cronPayload = JSON.parse(formData.cronSchedule.payload);
+        } catch (err) {
+          setError('Invalid JSON in cron payload field');
+          return;
+        }
+      }
+
+      const events = Array.isArray(formData.events) ? formData.events : formData.events.split(',').map(e => e.trim()).filter(e => e);
+      
+      // Add 'cron' to events if cron scheduling is enabled
+      if (formData.cronSchedule.enabled && !events.includes('cron')) {
+        events.push('cron');
+      }
+
       const scriptData = {
         ...formData,
         filters,
-        events: Array.isArray(formData.events) ? formData.events : formData.events.split(',').map(e => e.trim()).filter(e => e)
+        events,
+        cronSchedule: formData.cronSchedule.enabled ? {
+          expression: formData.cronSchedule.expression,
+          payload: cronPayload
+        } : null
       };
 
       if (selectedScript) {
@@ -412,6 +444,81 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
           {scriptStats.data?.executionStats?.lastExecution && (
             <div style={{ marginTop: '15px', padding: '10px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e9ecef', fontSize: '14px', color: '#666' }}>
               <strong>Last Execution:</strong> {new Date(scriptStats.data.executionStats.lastExecution).toLocaleString()}
+            </div>
+          )}
+
+          {/* Cron Scheduling Statistics */}
+          {scriptStats.data?.executionStats?.cronStats && (
+            <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#f0f8ff', borderRadius: '4px', border: '1px solid #b8daff' }}>
+              <h4 style={{ margin: '0 0 15px 0', color: '#495057' }}>⏰ Cron Scheduling Statistics</h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', marginBottom: '15px' }}>
+                <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '4px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0056b3' }}>
+                    {scriptStats.data.executionStats.cronStats.activeSchedules || 0}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#666' }}>Active Schedules</div>
+                </div>
+                
+                <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '4px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#28a745' }}>
+                    {scriptStats.data.executionStats.cronStats.cronExecutions?.toLocaleString() || 0}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#666' }}>Cron Executions</div>
+                </div>
+                
+                <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '4px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#dc3545' }}>
+                    {scriptStats.data.executionStats.cronStats.failedCronExecutions || 0}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#666' }}>Failed Cron</div>
+                </div>
+                
+                <div style={{ padding: '8px', backgroundColor: 'white', borderRadius: '4px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#6c757d' }}>
+                    {scriptStats.data.executionStats.cronStats.totalScheduledScripts || 0}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#666' }}>Total Scheduled</div>
+                </div>
+              </div>
+
+              {/* Scheduled Scripts List */}
+              {scriptStats.data.executionStats.cronStats.scheduledScripts && scriptStats.data.executionStats.cronStats.scheduledScripts.length > 0 && (
+                <div style={{ marginTop: '10px' }}>
+                  <h5 style={{ margin: '0 0 8px 0', color: '#495057', fontSize: '13px' }}>📅 Currently Scheduled Scripts:</h5>
+                  <div style={{ display: 'grid', gap: '6px' }}>
+                    {scriptStats.data.executionStats.cronStats.scheduledScripts.map((scheduled, index) => (
+                      <div key={index} style={{ 
+                        padding: '6px 10px', 
+                        backgroundColor: 'white', 
+                        borderRadius: '3px',
+                        fontSize: '12px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <span style={{ fontWeight: '500' }}>{scheduled.scriptName}</span>
+                        <span style={{ fontFamily: 'monospace', color: '#0056b3' }}>{scheduled.cronExpression}</span>
+                        <span style={{ 
+                          padding: '2px 6px', 
+                          borderRadius: '10px', 
+                          fontSize: '10px',
+                          backgroundColor: scheduled.isRunning ? '#d4edda' : '#f8d7da',
+                          color: scheduled.isRunning ? '#155724' : '#721c24'
+                        }}>
+                          {scheduled.isRunning ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {scriptStats.data?.executionStats?.cronStats?.lastCronExecution && (
+                <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
+                  <strong>Last Cron Execution:</strong> {new Date(scriptStats.data.executionStats.cronStats.lastCronExecution).toLocaleString()}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -755,6 +862,91 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                   <strong>Rate Limiting:</strong> Controls script execution frequency and retry behavior. 
                   Higher values allow more frequent execution but may impact performance.
                 </div>
+              </div>
+
+              {/* Cron Scheduling Configuration */}
+              <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f1f8ff', borderRadius: '6px', border: '1px solid #b8daff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+                  <input
+                    type="checkbox"
+                    id="cronEnabled"
+                    checked={formData.cronSchedule.enabled}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      cronSchedule: {
+                        ...prev.cronSchedule,
+                        enabled: e.target.checked
+                      }
+                    }))}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <label htmlFor="cronEnabled" style={{ fontWeight: 'bold', color: '#495057', fontSize: '14px' }}>
+                    ⏰ Enable Cron Scheduling
+                  </label>
+                </div>
+
+                {formData.cronSchedule.enabled && (
+                  <>
+                    <div style={{ marginBottom: '15px' }}>
+                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
+                        Cron Expression:
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.cronSchedule.expression}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          cronSchedule: {
+                            ...prev.cronSchedule,
+                            expression: e.target.value
+                          }
+                        }))}
+                        placeholder="* * * * * (every minute)"
+                        style={{ 
+                          width: '100%', 
+                          padding: '8px', 
+                          border: '1px solid #ccc', 
+                          borderRadius: '4px',
+                          fontFamily: 'monospace'
+                        }}
+                      />
+                      <div style={{ marginTop: '5px', fontSize: '11px', color: '#6c757d' }}>
+                        Examples: "0 9 * * *" (daily at 9 AM), "*/15 * * * *" (every 15 minutes), "0 0 * * 1" (every Monday at midnight)
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>
+                        Cron Payload (JSON):
+                      </label>
+                      <textarea
+                        value={formData.cronSchedule.payload}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          cronSchedule: {
+                            ...prev.cronSchedule,
+                            payload: e.target.value
+                          }
+                        }))}
+                        placeholder='{"scheduledTask": true, "type": "maintenance"}'
+                        rows="3"
+                        style={{ 
+                          width: '100%', 
+                          padding: '8px', 
+                          border: '1px solid #ccc', 
+                          borderRadius: '4px',
+                          fontFamily: 'monospace',
+                          fontSize: '12px'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginTop: '8px', fontSize: '11px', color: '#6c757d' }}>
+                      <strong>Cron Scheduling:</strong> Automatically executes the script based on the cron expression. 
+                      The payload will be merged with the script context during scheduled execution.
+                    </div>
+                  </>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

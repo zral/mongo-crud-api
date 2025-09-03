@@ -2,6 +2,7 @@ const vm = require('vm');
 const https = require('https');
 const http = require('http');
 const { URL } = require('url');
+const cron = require('node-cron');
 
 class ScriptExecutionService {
   constructor() {
@@ -10,6 +11,16 @@ class ScriptExecutionService {
     
     // Execution queue for failed scripts
     this.executionQueue = [];
+    
+    // Cron job tracking
+    this.scheduledJobs = new Map(); // Map of script IDs to cron job instances
+    this.cronStats = {
+      totalScheduledScripts: 0,
+      activeSchedules: 0,
+      cronExecutions: 0,
+      failedCronExecutions: 0,
+      lastCronExecution: null
+    };
     
     // Persistent execution statistics
     this.executionStats = {
@@ -528,6 +539,9 @@ class ScriptExecutionService {
       averageExecutionTime: this.executionStats.averageExecutionTime,
       peakExecutionsPerMinute: this.executionStats.peakExecutionsPerMinute,
       
+      // Cron scheduling statistics
+      cronStats: this.getCronStatistics(),
+      
       // Per-script statistics
       scriptExecutionCounts,
       topScripts: this.getTopScripts(),
@@ -562,6 +576,231 @@ class ScriptExecutionService {
   clearAllRateLimits() {
     this.rateLimitMap.clear();
     this.executionQueue.length = 0;
+  }
+
+  /**
+   * Schedule a script to run on a cron schedule
+   */
+  scheduleScript(script, cronExpression, payload = {}) {
+    const scriptId = script._id ? script._id.toString() : script.name;
+    
+    // Validate cron expression
+    if (!cron.validate(cronExpression)) {
+      throw new Error(`Invalid cron expression: ${cronExpression}`);
+    }
+    
+    // Stop existing schedule if any
+    this.unscheduleScript(scriptId);
+    
+    console.log(`📅 Scheduling script "${script.name}" with cron: ${cronExpression}`);
+    
+    // Create and start the cron job
+    const job = cron.schedule(cronExpression, async () => {
+      try {
+        console.log(`⏰ Executing scheduled script: ${script.name}`);
+        this.cronStats.cronExecutions++;
+        this.cronStats.lastCronExecution = new Date().toISOString();
+        
+        // Execute the script with cron-specific payload
+        const cronPayload = {
+          ...payload,
+          trigger: 'cron',
+          scheduled: true,
+          executionTime: new Date().toISOString(),
+          cronExpression: cronExpression
+        };
+        
+        const result = await this.executeScript(script, cronPayload);
+        console.log(`✅ Scheduled script "${script.name}" executed successfully:`, result);
+        
+      } catch (error) {
+        this.cronStats.failedCronExecutions++;
+        console.error(`❌ Scheduled script "${script.name}" execution failed:`, error);
+      }
+    }, {
+      scheduled: false // Don't start immediately
+    });
+    
+    // Store the job
+    this.scheduledJobs.set(scriptId, {
+      job,
+      cronExpression,
+      script,
+      payload,
+      createdAt: new Date().toISOString(),
+      lastExecution: null
+    });
+    
+    // Start the job
+    job.start();
+    
+    // Update statistics
+    this.cronStats.totalScheduledScripts++;
+    this.cronStats.activeSchedules = this.scheduledJobs.size;
+    
+    return {
+      success: true,
+      message: `Script "${script.name}" scheduled with cron: ${cronExpression}`,
+      scriptId,
+      cronExpression
+    };
+  }
+
+  /**
+   * Unschedule a script
+   */
+  unscheduleScript(scriptId) {
+    const scheduledJob = this.scheduledJobs.get(scriptId);
+    if (scheduledJob) {
+      scheduledJob.job.stop();
+      scheduledJob.job.destroy();
+      this.scheduledJobs.delete(scriptId);
+      this.cronStats.activeSchedules = this.scheduledJobs.size;
+      
+      console.log(`🗑️ Unscheduled script: ${scriptId}`);
+      return { success: true, message: `Script ${scriptId} unscheduled` };
+    }
+    
+    return { success: false, message: `No scheduled job found for script: ${scriptId}` };
+  }
+
+  /**
+   * Get all scheduled scripts
+   */
+  getScheduledScripts() {
+    const scheduled = [];
+    for (const [scriptId, jobData] of this.scheduledJobs.entries()) {
+      scheduled.push({
+        scriptId,
+        scriptName: jobData.script.name,
+        cronExpression: jobData.cronExpression,
+        createdAt: jobData.createdAt,
+        lastExecution: jobData.lastExecution,
+        isRunning: jobData.job.running
+      });
+    }
+    return scheduled;
+  }
+
+  /**
+   * Update scheduled script payload
+   */
+  updateScheduledScriptPayload(scriptId, newPayload) {
+    const scheduledJob = this.scheduledJobs.get(scriptId);
+    if (scheduledJob) {
+      scheduledJob.payload = { ...scheduledJob.payload, ...newPayload };
+      return { success: true, message: `Payload updated for script: ${scriptId}` };
+    }
+    
+    return { success: false, message: `No scheduled job found for script: ${scriptId}` };
+  }
+
+  /**
+   * Reschedule a script with new cron expression
+   */
+  rescheduleScript(scriptId, newCronExpression) {
+    const scheduledJob = this.scheduledJobs.get(scriptId);
+    if (!scheduledJob) {
+      return { success: false, message: `No scheduled job found for script: ${scriptId}` };
+    }
+    
+    // Validate new cron expression
+    if (!cron.validate(newCronExpression)) {
+      return { success: false, message: `Invalid cron expression: ${newCronExpression}` };
+    }
+    
+    // Reschedule with new expression
+    const result = this.scheduleScript(scheduledJob.script, newCronExpression, scheduledJob.payload);
+    
+    return {
+      success: true,
+      message: `Script "${scheduledJob.script.name}" rescheduled with new cron: ${newCronExpression}`,
+      previousCron: scheduledJob.cronExpression,
+      newCron: newCronExpression
+    };
+  }
+
+  /**
+   * Get cron scheduling statistics
+   */
+  getCronStatistics() {
+    return {
+      ...this.cronStats,
+      activeSchedules: this.scheduledJobs.size,
+      scheduledScripts: this.getScheduledScripts()
+    };
+  }
+
+  /**
+   * Validate cron expression
+   */
+  validateCronExpression(expression) {
+    return {
+      valid: cron.validate(expression),
+      expression
+    };
+  }
+
+  /**
+   * Get next execution times for scheduled scripts
+   */
+  getNextExecutions() {
+    const nextExecutions = [];
+    for (const [scriptId, jobData] of this.scheduledJobs.entries()) {
+      try {
+        // Calculate next execution time
+        const task = cron.schedule(jobData.cronExpression, () => {}, { scheduled: false });
+        nextExecutions.push({
+          scriptId,
+          scriptName: jobData.script.name,
+          cronExpression: jobData.cronExpression,
+          nextExecution: 'Calculation not available', // node-cron doesn't provide next execution directly
+          isActive: jobData.job.running
+        });
+        task.destroy();
+      } catch (error) {
+        console.error(`Error calculating next execution for ${scriptId}:`, error);
+      }
+    }
+    return nextExecutions;
+  }
+
+  /**
+   * Stop all scheduled scripts
+   */
+  stopAllScheduledScripts() {
+    let stoppedCount = 0;
+    for (const [scriptId, jobData] of this.scheduledJobs.entries()) {
+      jobData.job.stop();
+      stoppedCount++;
+    }
+    
+    console.log(`🛑 Stopped ${stoppedCount} scheduled scripts`);
+    return {
+      success: true,
+      message: `Stopped ${stoppedCount} scheduled scripts`,
+      stoppedCount
+    };
+  }
+
+  /**
+   * Start all scheduled scripts
+   */
+  startAllScheduledScripts() {
+    let startedCount = 0;
+    for (const [scriptId, jobData] of this.scheduledJobs.entries()) {
+      if (!jobData.job.running) {
+        jobData.job.start();
+        startedCount++;
+      }
+    }
+    
+    console.log(`▶️ Started ${startedCount} scheduled scripts`);
+    return {
+      success: true,
+      message: `Started ${startedCount} scheduled scripts`,
+      startedCount
+    };
   }
 }
 
