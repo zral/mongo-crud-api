@@ -31,6 +31,20 @@ GET    /api/scripts/stats             # Get execution statistics
 POST   /api/scripts/clear-rate-limits # Clear rate limits
 ```
 
+### Cron Scheduling
+
+```http
+POST   /api/scripts/schedule          # Schedule script with cron expression
+DELETE /api/scripts/schedule/{name}   # Unschedule script
+PUT    /api/scripts/schedule/{name}   # Reschedule script
+GET    /api/scripts/scheduled/list    # List all scheduled scripts
+GET    /api/scripts/scheduled/{name}  # Get schedule details
+POST   /api/scripts/scheduled/{name}/trigger # Manually trigger scheduled script
+GET    /api/scripts/cron/statistics   # Get cron execution statistics
+DELETE /api/scripts/cron/statistics/reset # Reset cron statistics
+GET    /api/scripts/cron/validate/{expression} # Validate cron expression
+```
+
 ### Create Script
 
 ```bash
@@ -51,6 +65,101 @@ curl -X POST http://localhost:3003/api/scripts \
       "maxDelayMs": 30000
     }
   }'
+```
+
+## Cron Scheduling
+
+The JavaScript automation engine supports full cron-style scheduling for timed script execution. Scripts can be scheduled to run at specific times or intervals using standard cron expressions.
+
+### Schedule Script
+
+```bash
+curl -X POST http://localhost:3003/api/scripts/schedule \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "daily-cleanup",
+    "cronExpression": "0 2 * * *",
+    "scriptCode": "console.log(\"Running daily cleanup at\", new Date())"
+  }'
+```
+
+### Cron Expression Format
+
+```
+┌─────────────── minute (0 - 59)
+│ ┌───────────── hour (0 - 23)  
+│ │ ┌─────────── day of month (1 - 31)
+│ │ │ ┌───────── month (1 - 12)
+│ │ │ │ ┌─────── day of week (0 - 6) (Sunday=0)
+│ │ │ │ │
+* * * * *
+```
+
+### Common Cron Patterns
+
+```bash
+*/5 * * * *   # Every 5 minutes
+0 */2 * * *   # Every 2 hours
+0 9 * * *     # Daily at 9:00 AM
+0 9 * * 1     # Every Monday at 9:00 AM
+0 0 1 * *     # First day of every month at midnight
+0 0 * * 0     # Every Sunday at midnight
+*/15 9-17 * * 1-5  # Every 15 minutes during business hours (9-5, Mon-Fri)
+```
+
+### Schedule Management
+
+```bash
+# List all scheduled scripts
+curl http://localhost:3003/api/scripts/scheduled/list
+
+# Get specific schedule details
+curl http://localhost:3003/api/scripts/scheduled/daily-cleanup
+
+# Update schedule
+curl -X PUT http://localhost:3003/api/scripts/schedule/daily-cleanup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cronExpression": "0 3 * * *",
+    "scriptCode": "console.log(\"Updated cleanup time to 3 AM\")"
+  }'
+
+# Manually trigger scheduled script
+curl -X POST http://localhost:3003/api/scripts/scheduled/daily-cleanup/trigger
+
+# Unschedule script
+curl -X DELETE http://localhost:3003/api/scripts/schedule/daily-cleanup
+
+# Get cron statistics
+curl http://localhost:3003/api/scripts/cron/statistics
+
+# Validate cron expression
+curl http://localhost:3003/api/scripts/cron/validate/0%202%20*%20*%20*
+```
+
+### Cron Statistics
+
+The system tracks comprehensive statistics for scheduled scripts:
+
+```json
+{
+  "totalExecutions": 1250,
+  "successfulExecutions": 1248,
+  "failedExecutions": 2,
+  "averageExecutionTime": 125,
+  "lastExecuted": "2025-09-03T02:00:00.000Z",
+  "nextExecution": "2025-09-04T02:00:00.000Z",
+  "schedules": [
+    {
+      "name": "daily-cleanup",
+      "cronExpression": "0 2 * * *",
+      "executions": 30,
+      "lastRun": "2025-09-03T02:00:00.000Z",
+      "nextRun": "2025-09-04T02:00:00.000Z",
+      "status": "active"
+    }
+  ]
+}
 ```
 
 ## Script Execution Context

@@ -26,12 +26,24 @@ This project has successfully implemented a comprehensive Node.js REST API that 
 ### ⚡ JavaScript Automation Engine (NEW!)
 - **Custom Script Execution**: Run JavaScript code in response to database operations
 - **Event-Driven Triggers**: Scripts execute on create, update, delete events
+- **Cron Scheduling**: Full cron-style scheduling system for timed script execution
 - **Secure VM Sandboxing**: Scripts run in isolated Node.js VM with timeout protection
 - **Built-in API Client**: HTTP client for making requests to collection endpoints
 - **Advanced Filtering**: MongoDB-style filters for selective script execution
 - **Rate Limiting**: Configurable execution limits with exponential backoff
 - **Real-time Testing**: Test scripts with sample data before deployment
-- **Management Interface**: Full-featured frontend for script management
+- **Schedule Management**: Complete lifecycle management for scheduled jobs
+- **Management Interface**: Full-featured frontend for script and schedule management
+
+### ⏰ Cron Scheduling System (NEW!)
+- **Full Cron Support**: Standard cron expressions (minute, hour, day, month, weekday)
+- **Job Management**: Create, update, delete, and list scheduled scripts
+- **Manual Triggers**: Execute scheduled scripts on-demand for testing
+- **Real-time Statistics**: Execution counts, success/failure tracking, performance metrics
+- **Expression Validation**: Built-in cron expression validator with helpful error messages
+- **Schedule Overview**: View all active schedules with next execution times
+- **Flexible Timing**: From every minute to complex yearly schedules
+- **Background Processing**: Non-blocking cron job execution with queue management
 
 ### 🛡️ Production-Ready Features
 - **Database Resilience**: Connection retry logic with exponential backoff
@@ -105,6 +117,17 @@ This project has successfully implemented a comprehensive Node.js REST API that 
 - `POST /api/scripts/{id}/test` - Test script execution with sample data
 - `GET /api/scripts/stats` - Get execution statistics and performance metrics
 - `POST /api/scripts/clear-rate-limits` - Clear rate limit counters for all scripts
+
+### Cron Scheduling API (NEW!)
+- `POST /api/scripts/schedule` - Schedule script with cron expression
+- `DELETE /api/scripts/schedule/{name}` - Unschedule script
+- `PUT /api/scripts/schedule/{name}` - Reschedule script with new cron expression
+- `GET /api/scripts/scheduled/list` - List all scheduled scripts
+- `GET /api/scripts/scheduled/{name}` - Get specific schedule details
+- `POST /api/scripts/scheduled/{name}/trigger` - Manually trigger scheduled script
+- `GET /api/scripts/cron/statistics` - Get cron execution statistics
+- `DELETE /api/scripts/cron/statistics/reset` - Reset cron statistics
+- `GET /api/scripts/cron/validate/{expression}` - Validate cron expression
 
 ### Management API
 - `GET /api/management/collections` - List all collections with metadata

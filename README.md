@@ -26,12 +26,23 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 
 ### **JavaScript Automation Engine**
 - **Event-Driven Scripts**: JavaScript snippets triggered by database operations (create, update, delete)
+- **Cron Scheduling**: Full cron-style scheduling system for timed script execution
 - **Secure Execution**: VM sandboxing with 30-second timeout protection
 - **API Integration**: Built-in HTTP client for making API calls to any collection
 - **Advanced Filtering**: MongoDB-style filters for selective script execution
 - **Rate Limiting**: Configurable execution limits with exponential backoff retry
 - **Real-time Testing**: Test scripts with sample data before deployment
+- **Schedule Management**: Complete lifecycle management for scheduled jobs
 - **Comprehensive Logging**: Built-in utility functions for debugging and monitoring
+
+### **Cron Scheduling System**
+- **Full Cron Support**: Standard cron expressions (minute, hour, day, month, weekday)
+- **Job Management**: Create, update, delete, and list scheduled scripts
+- **Manual Triggers**: Execute scheduled scripts on-demand for testing
+- **Real-time Statistics**: Execution counts, success/failure tracking, performance metrics
+- **Expression Validation**: Built-in cron expression validator with helpful error messages
+- **Schedule Overview**: View all active schedules with next execution times
+- **Flexible Timing**: From every minute to complex yearly schedules
 
 ### **SDK Generation & Documentation**
 - **TypeScript SDK Generation**: Auto-generated type-safe client libraries
@@ -163,6 +174,65 @@ POST   /api/scripts/{id}/test         # Test script execution with sample data
 GET    /api/scripts/stats             # Get script execution statistics
 POST   /api/scripts/clear-rate-limits # Clear rate limits for all scripts
 ```
+
+### **Cron Scheduling API**
+
+```http
+POST   /api/scripts/schedule          # Schedule script with cron expression
+DELETE /api/scripts/schedule/{name}   # Unschedule script
+PUT    /api/scripts/schedule/{name}   # Reschedule script with new cron expression
+GET    /api/scripts/scheduled/list    # List all scheduled scripts
+GET    /api/scripts/scheduled/{name}  # Get specific schedule details
+POST   /api/scripts/scheduled/{name}/trigger # Manually trigger scheduled script
+GET    /api/scripts/cron/statistics   # Get cron execution statistics
+DELETE /api/scripts/cron/statistics/reset # Reset cron statistics
+GET    /api/scripts/cron/validate/{expression} # Validate cron expression
+```
+
+**Cron Scheduling Examples:**
+```bash
+# Schedule a script to run every 5 minutes
+curl -X POST http://localhost:3003/api/scripts/schedule \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "data-cleanup",
+    "cronExpression": "*/5 * * * *",
+    "scriptCode": "console.log(\"Running cleanup at\", new Date())"
+  }'
+
+# Schedule daily report at 9 AM
+curl -X POST http://localhost:3003/api/scripts/schedule \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "daily-report",
+    "cronExpression": "0 9 * * *",
+    "scriptCode": "console.log(\"Generating daily report...\")"
+  }'
+
+# List all scheduled scripts
+curl http://localhost:3003/api/scripts/scheduled/list
+
+# Validate cron expression
+curl http://localhost:3003/api/scripts/cron/validate/0%209%20*%20*%20*
+```
+
+**Cron Expression Format:**
+```
+┌─────────────── minute (0 - 59)
+│ ┌───────────── hour (0 - 23)
+│ │ ┌─────────── day of month (1 - 31)
+│ │ │ ┌───────── month (1 - 12)
+│ │ │ │ ┌─────── day of week (0 - 6) (Sunday=0)
+│ │ │ │ │
+* * * * *
+```
+
+**Common Cron Patterns:**
+- `*/5 * * * *` - Every 5 minutes
+- `0 */2 * * *` - Every 2 hours
+- `0 9 * * *` - Daily at 9:00 AM
+- `0 9 * * 1` - Every Monday at 9:00 AM
+- `0 0 1 * *` - First day of every month at midnight
 
 ### **SDK Generation & Documentation API**
 

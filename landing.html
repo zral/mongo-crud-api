@@ -160,7 +160,7 @@
     <section class="hero">
         <div class="container">
             <h1>🚀 MongoDB CRUD API</h1>
-            <p>Enterprise-grade REST API with <span class="highlight">JavaScript Automation Engine</span></p>
+            <p>Enterprise-grade REST API with <span class="highlight">JavaScript Automation Engine</span> and <span class="highlight">Cron Scheduling</span></p>
             <p>Dynamic collections • Real-time webhooks • Custom scripting • Production ready</p>
             <a href="#features" class="cta-button">Explore Features</a>
         </div>
@@ -185,7 +185,7 @@
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
                     <h3>JavaScript Automation Engine</h3>
-                    <p>Execute custom JavaScript code automatically on database events. Secure VM sandboxing, built-in API client, rate limiting, and real-time testing capabilities.</p>
+                    <p>Execute custom JavaScript code automatically on database events or scheduled with cron expressions. Secure VM sandboxing, built-in API client, rate limiting, and real-time testing capabilities.</p>
                 </div>
 
                 <div class="feature-card">
@@ -306,6 +306,14 @@ GET    /api/scripts            # List scripts
 POST   /api/scripts            # Create script
 POST   /api/scripts/{id}/test  # Test execution
 GET    /api/scripts/stats      # Statistics</pre>
+                </div>
+                <div>
+                    <h3>⏰ Cron Scheduling</h3>
+                    <pre style="background: #f8f9fa; padding: 20px; border-radius: 8px; font-size: 14px; overflow-x: auto;">
+POST   /api/scripts/schedule   # Schedule script
+GET    /api/scripts/scheduled/list # List schedules
+POST   /api/scripts/scheduled/{name}/trigger # Manual trigger
+GET    /api/scripts/cron/statistics # Cron stats</pre>
                 </div>
                 <div>
                     <h3>🛠️ Management & SDK</h3>

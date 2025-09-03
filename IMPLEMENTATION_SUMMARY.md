@@ -140,6 +140,52 @@
 - `POST /api/bulk/upload` - Execute bulk data import
 - `GET /api/bulk/template/:collection` - Generate CSV template
 
+### 8. JavaScript Automation Engine ✅
+**Location**: `src/services/scriptExecution.js`, `src/routes/scripts.js`
+
+**Features**:
+- Event-driven script execution triggered by database operations (create, update, delete)
+- Secure VM sandboxing with 30-second timeout protection
+- Built-in HTTP client for API integration
+- MongoDB-style filtering for selective script execution
+- Rate limiting with exponential backoff retry mechanism
+- Real-time script testing with sample data
+- Comprehensive execution statistics and monitoring
+
+**Key Methods**:
+- `executeScript()` - Main script execution with VM sandboxing
+- `testScript()` - Safe script testing with sample data
+- `getStatistics()` - Real-time execution metrics
+- `clearRateLimits()` - Rate limit management
+
+### 9. Cron Scheduling System ✅
+**Location**: `src/services/scriptExecution.js`, `src/routes/scripts.js`
+
+**Features**:
+- Full cron expression support for timed script execution
+- Complete job lifecycle management (create, update, delete, list)
+- Manual trigger functionality for testing scheduled scripts
+- Real-time execution statistics and performance monitoring
+- Built-in cron expression validation with error messages
+- Schedule overview with next execution times
+- Background processing with non-blocking execution
+
+**Key Methods**:
+- `scheduleScript()` - Create new scheduled script with cron expression
+- `unscheduleScript()` - Remove scheduled script
+- `rescheduleScript()` - Update existing schedule
+- `getScheduledScripts()` - List all active schedules
+- `triggerScheduledScript()` - Manual execution for testing
+- `getCronStatistics()` - Comprehensive execution analytics
+- `validateCronExpression()` - Cron expression validation
+
+**Cron Features**:
+- Standard cron format support (minute, hour, day, month, weekday)
+- Flexible scheduling from every minute to complex yearly patterns
+- Automatic next execution time calculation
+- Job persistence and recovery on server restart
+- Execution history and failure tracking
+
 ## API Endpoints
 
 ### Collection Endpoints with Advanced Filtering
@@ -158,6 +204,27 @@
 - `DELETE /api/webhooks/:id` - Delete webhook
 - `POST /api/webhooks/:id/test` - Test webhook delivery
 - `GET /api/webhooks/stats` - Get comprehensive delivery statistics
+
+### JavaScript Scripts Management
+- `GET /api/scripts` - List all automation scripts
+- `POST /api/scripts` - Create new automation script
+- `GET /api/scripts/:id` - Get specific script details
+- `PUT /api/scripts/:id` - Update script configuration
+- `DELETE /api/scripts/:id` - Delete script
+- `POST /api/scripts/:id/test` - Test script execution with sample data
+- `GET /api/scripts/stats` - Get script execution statistics
+- `POST /api/scripts/clear-rate-limits` - Clear rate limits for all scripts
+
+### Cron Scheduling Management
+- `POST /api/scripts/schedule` - Schedule script with cron expression
+- `DELETE /api/scripts/schedule/:name` - Unschedule script
+- `PUT /api/scripts/schedule/:name` - Reschedule script with new cron expression
+- `GET /api/scripts/scheduled/list` - List all scheduled scripts
+- `GET /api/scripts/scheduled/:name` - Get specific schedule details
+- `POST /api/scripts/scheduled/:name/trigger` - Manually trigger scheduled script
+- `GET /api/scripts/cron/statistics` - Get cron execution statistics
+- `DELETE /api/scripts/cron/statistics/reset` - Reset cron statistics
+- `GET /api/scripts/cron/validate/:expression` - Validate cron expression
 
 ### Enhanced Webhook Creation Example
 ```json
