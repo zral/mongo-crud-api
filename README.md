@@ -1,7 +1,5 @@
 # MongoDB CRUD REST API with React Frontend
 
-# MongoDB CRUD REST API with React Frontend
-
 An enterprise-grade Node.js application that dynamically exposes MongoDB collections as REST endpoints with comprehensive CRUD functionality, advanced webhook system, intelligent rate limiting, and a modern React web interface.
 
 ## 🚀 Features
@@ -86,16 +84,16 @@ Perfect for presenting this solution to stakeholders, investors, or as a foundat
 ```bash
 # Start all services with Docker Compose
 docker-compose up -d
-
-# Access the application
+```
+### Access the application
 Frontend: http://localhost:3002
 API: http://localhost:3003  
 MongoDB: localhost:27017
-
-# Quick API test
+### Quick API test
+```bash
 curl http://localhost:3003/api/management/collections
+```
 - **Update Options**: Configurable upsert behavior for duplicate handling
-
 ### **SDK Generation & Documentation**
 - **TypeScript SDK Generation**: Auto-generated type-safe client libraries
 - **OpenAPI/Swagger Specification**: Complete API documentation with interactive explorer
@@ -154,8 +152,10 @@ Perfect for presenting this solution to stakeholders, investors, or as a foundat
 ## 🎯 Quick Start
 
 ```bash
+
 # Start all services with Docker Compose
 docker-compose up -d
+
 
 # Access the application
 Frontend: http://localhost:3002
