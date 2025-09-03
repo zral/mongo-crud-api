@@ -62,7 +62,7 @@ async function runBasicCrudTests() {
 
     // Test 3: Test Users Collection (should exist from init)
     console.log('3. Testing users collection...');
-    const users = await makeRequest('GET', '/api/users');
+    const users = await makeRequest('GET', '/api/db/users');
     console.log(`   Status: ${users.status}`);
     console.log(`   Users found: ${users.data?.data?.length || 0}\n`);
 
@@ -74,7 +74,7 @@ async function runBasicCrudTests() {
       age: 28,
       department: 'Testing'
     };
-    const createResult = await makeRequest('POST', '/api/users', newUser);
+    const createResult = await makeRequest('POST', '/api/db/users', newUser);
     console.log(`   Status: ${createResult.status}`);
     const userId = createResult.data?.data?._id;
     console.log(`   Created user ID: ${userId}\n`);
@@ -82,34 +82,34 @@ async function runBasicCrudTests() {
     if (userId) {
       // Test 5: Get document by ID
       console.log('5. Getting user by ID...');
-      const getUser = await makeRequest('GET', `/api/users/${userId}`);
+      const getUser = await makeRequest('GET', `/api/db/users/${userId}`);
       console.log(`   Status: ${getUser.status}`);
       console.log(`   User: ${getUser.data?.data?.name}\n`);
 
       // Test 6: Update document
       console.log('6. Updating user...');
       const updateData = { age: 29, department: 'Updated Testing' };
-      const updateResult = await makeRequest('PUT', `/api/users/${userId}`, updateData);
+      const updateResult = await makeRequest('PUT', `/api/db/users/${userId}`, updateData);
       console.log(`   Status: ${updateResult.status}`);
       console.log(`   Updated age: ${updateResult.data?.data?.age}\n`);
 
       // Test 7: Delete document
       console.log('7. Deleting user...');
-      const deleteResult = await makeRequest('DELETE', `/api/users/${userId}`);
+      const deleteResult = await makeRequest('DELETE', `/api/db/users/${userId}`);
       console.log(`   Status: ${deleteResult.status}`);
       console.log(`   Deleted user: ${deleteResult.data?.data?.name}\n`);
     }
 
     // Test 8: Test pagination
     console.log('8. Testing pagination...');
-    const paginatedUsers = await makeRequest('GET', '/api/users?page=1&limit=2');
+    const paginatedUsers = await makeRequest('GET', '/api/db/users?page=1&limit=2');
     console.log(`   Status: ${paginatedUsers.status}`);
     console.log(`   Page: ${paginatedUsers.data?.pagination?.page}`);
     console.log(`   Total: ${paginatedUsers.data?.pagination?.total}\n`);
 
     // Test 9: Test sorting
     console.log('9. Testing sorting...');
-    const sortedUsers = await makeRequest('GET', '/api/users?sort=-age');
+    const sortedUsers = await makeRequest('GET', '/api/db/users?sort=-age');
     console.log(`   Status: ${sortedUsers.status}`);
     if (sortedUsers.data?.data?.length > 0) {
       console.log(`   First user age: ${sortedUsers.data.data[0].age}\n`);

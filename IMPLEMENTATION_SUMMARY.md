@@ -136,9 +136,9 @@
 - `previewFile()` - Sample data preview for validation
 
 **API Endpoints**:
-- `POST /api/bulk/preview` - Preview file data before import
-- `POST /api/bulk/upload` - Execute bulk data import
-- `GET /api/bulk/template/:collection` - Generate CSV template
+- `POST /api/db/bulk/preview` - Preview file data before import
+- `POST /api/db/bulk/upload` - Execute bulk data import
+- `GET /api/db/bulk/template/:collection` - Generate CSV template
 
 ### 8. JavaScript Automation Engine ✅
 **Location**: `src/services/scriptExecution.js`, `src/routes/scripts.js`

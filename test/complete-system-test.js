@@ -49,21 +49,21 @@ async function testCompleteSystem() {
             timestamp: new Date().toISOString(),
             data: { test: true, number: 42 }
         };
-        const createResponse = await axios.post(`${API_BASE}/api/${testCollectionName}`, testDoc);
+        const createResponse = await axios.post(`${API_BASE}/api/db/${testCollectionName}`, testDoc);
         const documentId = createResponse.data.data._id;
         console.log(chalk.green('   ✓ Document created with ID:', documentId));
 
         console.log('2. Retrieve document...');
-        const getResponse = await axios.get(`${API_BASE}/api/${testCollectionName}/${documentId}`);
+        const getResponse = await axios.get(`${API_BASE}/api/db/${testCollectionName}/${documentId}`);
         console.log(chalk.green('   ✓ Document retrieved:', getResponse.data.data.name));
 
         console.log('3. Update document...');
         const updateData = { ...testDoc, updated: true, updatedAt: new Date().toISOString() };
-        await axios.put(`${API_BASE}/api/${testCollectionName}/${documentId}`, updateData);
+        await axios.put(`${API_BASE}/api/db/${testCollectionName}/${documentId}`, updateData);
         console.log(chalk.green('   ✓ Document updated successfully'));
 
         console.log('4. List documents with pagination...');
-        const listResponse = await axios.get(`${API_BASE}/api/${testCollectionName}?page=1&limit=10`);
+        const listResponse = await axios.get(`${API_BASE}/api/db/${testCollectionName}?page=1&limit=10`);
         console.log(chalk.green('   ✓ Retrieved', listResponse.data.data.length, 'documents'));
         console.log(chalk.gray('     Pagination:', listResponse.data.pagination));
 
@@ -71,7 +71,7 @@ async function testCompleteSystem() {
         console.log(chalk.yellow('\n🧹 Cleanup...\n'));
         
         console.log('1. Delete test document...');
-        await axios.delete(`${API_BASE}/api/${testCollectionName}/${documentId}`);
+        await axios.delete(`${API_BASE}/api/db/${testCollectionName}/${documentId}`);
         console.log(chalk.green('   ✓ Document deleted'));
 
         console.log('2. Drop test collection...');

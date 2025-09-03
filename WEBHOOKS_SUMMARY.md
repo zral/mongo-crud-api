@@ -607,7 +607,7 @@ curl -X POST http://localhost:3001/api/webhooks/{webhook-id}/test
 
 3. **Trigger the Webhook**
 ```bash
-curl -X POST http://localhost:3001/api/users \
+curl -X POST http://localhost:3001/api/db/users \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Test User",

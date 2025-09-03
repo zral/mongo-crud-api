@@ -88,16 +88,16 @@ This project has successfully implemented a comprehensive Node.js REST API that 
 ## 📡 API Endpoints
 
 ### Collection CRUD Operations (Enhanced)
-- `GET /api/{collection}` - List documents with advanced filtering and pagination
+- `GET /api/db/{collection}` - List documents with advanced filtering and pagination
   - **Advanced Filtering**: `?age=>25&status=active&department=Sales,Engineering`
   - **Range Queries**: `?price=100..500&age=25..65`
   - **Text Search**: `?search=developer&fields=name,skills`
   - **Field Projection**: `?fields=name,email,age` or `?fields=-password,-sensitive`
   - **MongoDB Queries**: `?filter.status={"$in":["active","pending"]}`
-- `GET /api/{collection}/{id}` - Get document by ID
-- `POST /api/{collection}` - Create new document with webhook triggers
-- `PUT /api/{collection}/{id}` - Update document by ID with webhook triggers
-- `DELETE /api/{collection}/{id}` - Delete document by ID with webhook triggers
+- `GET /api/db/{collection}/{id}` - Get document by ID
+- `POST /api/db/{collection}` - Create new document with webhook triggers
+- `PUT /api/db/{collection}/{id}` - Update document by ID with webhook triggers
+- `DELETE /api/db/{collection}/{id}` - Delete document by ID with webhook triggers
 
 ### Webhook Management API
 - `GET /api/webhooks` - List all webhooks with rate limit information

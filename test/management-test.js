@@ -39,7 +39,7 @@ async function runManagementTests() {
       value: 100,
       active: true
     };
-    const addData = await makeRequest('POST', '/api/test_items', testItem);
+    const addData = await makeRequest('POST', '/api/db/test_items', testItem);
     console.log(`   Status: ${addData.status}`);
     console.log(`   Created item: ${addData.data?.data?.name}\n`);
 

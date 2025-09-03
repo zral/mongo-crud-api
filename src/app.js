@@ -42,7 +42,7 @@ app.use('/api/webhooks', webhookRoutes);
 app.use('/api/scripts', scriptRoutes);
 app.use('/api/sdk', sdkRoutes);
 app.use('/api/bulk', bulkDataRoutes);
-app.use('/api', collectionRoutes);
+app.use('/api/db', collectionRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -64,11 +64,11 @@ app.use('*', (req, res) => {
       'GET /api/sdk/docs',
       'GET /api/sdk/typescript',
       'GET /api/sdk/schemas',
-      'GET /api/{collection}',
-      'GET /api/{collection}/{id}',
-      'POST /api/{collection}',
-      'PUT /api/{collection}/{id}',
-      'DELETE /api/{collection}/{id}'
+      'GET /api/db/{collection}',
+      'GET /api/db/{collection}/{id}',
+      'POST /api/db/{collection}',
+      'PUT /api/db/{collection}/{id}',
+      'DELETE /api/db/{collection}/{id}'
     ]
   });
 });

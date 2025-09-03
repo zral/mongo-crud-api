@@ -228,7 +228,7 @@ utils.log('Processing event:', payload.event, 'for collection:', payload.collect
 
 // Example: Get data from another collection
 try {
-  const otherData = await api.get('/api/othercollection');
+  const otherData = await api.get('/api/db/othercollection');
   utils.log('Other data:', otherData);
 } catch (error) {
   utils.error('Failed to fetch other data:', error.message);
@@ -243,7 +243,7 @@ if (payload.event === 'create') {
   };
   
   try {
-    const result = await api.post('/api/processed_documents', newDoc);
+    const result = await api.post('/api/db/processed_documents', newDoc);
     utils.log('Created processed document:', result);
     return { success: true, processedId: result.data._id };
   } catch (error) {

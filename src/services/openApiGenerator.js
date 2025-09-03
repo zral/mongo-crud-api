@@ -23,7 +23,7 @@ class OpenApiGenerator {
         info: {
           title: 'MongoDB CRUD REST API',
           version: '1.0.0',
-          description: 'Dynamic MongoDB collection management with CRUD operations, webhooks, and advanced filtering',
+          description: 'Dynamic MongoDB collection management with CRUD operations, webhooks, event scripts, scheduled scripts, and advanced filtering',
           contact: {
             name: 'API Support',
             email: 'support@example.com'
@@ -63,6 +63,7 @@ class OpenApiGenerator {
     spec.paths = {
       ...this.generateManagementPaths(),
       ...this.generateWebhookPaths(),
+      ...this.generateScriptPaths(),
       ...this.generateCollectionPaths(collections, schemas),
       ...this.generateSDKPaths()
     };
@@ -197,6 +198,142 @@ class OpenApiGenerator {
           }
         },
         required: ['name', 'url', 'collection', 'events']
+      },
+      EventScript: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            description: 'Script ID'
+          },
+          name: {
+            type: 'string',
+            description: 'Script name'
+          },
+          description: {
+            type: 'string',
+            description: 'Script description'
+          },
+          collection: {
+            type: 'string',
+            description: 'Target collection name'
+          },
+          events: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['create', 'update', 'delete']
+            },
+            description: 'Events that trigger the script'
+          },
+          filters: {
+            type: 'object',
+            description: 'MongoDB query filters to limit script execution'
+          },
+          code: {
+            type: 'string',
+            description: 'JavaScript code to execute'
+          },
+          enabled: {
+            type: 'boolean',
+            description: 'Whether the script is active'
+          },
+          rateLimit: {
+            type: 'object',
+            properties: {
+              maxExecutionsPerMinute: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 300,
+                description: 'Maximum executions per minute'
+              },
+              maxRetries: {
+                type: 'integer',
+                minimum: 0,
+                maximum: 10,
+                description: 'Maximum retry attempts'
+              },
+              baseDelayMs: {
+                type: 'integer',
+                minimum: 100,
+                maximum: 10000,
+                description: 'Initial retry delay in milliseconds'
+              },
+              maxDelayMs: {
+                type: 'integer',
+                minimum: 1000,
+                maximum: 300000,
+                description: 'Maximum retry delay in milliseconds'
+              }
+            }
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time'
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time'
+          }
+        },
+        required: ['name', 'collection', 'events', 'code']
+      },
+      ScheduledScript: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Scheduled script name'
+          },
+          cronExpression: {
+            type: 'string',
+            description: 'Cron expression for scheduling',
+            example: '0 */1 * * *'
+          },
+          scriptCode: {
+            type: 'string',
+            description: 'JavaScript code to execute'
+          },
+          isRunning: {
+            type: 'boolean',
+            description: 'Whether the scheduled script is active'
+          },
+          lastExecution: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Last execution timestamp'
+          },
+          nextExecution: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Next scheduled execution'
+          },
+          executionCount: {
+            type: 'integer',
+            description: 'Total number of executions'
+          }
+        },
+        required: ['name', 'cronExpression', 'scriptCode']
+      },
+      ScriptExecutionResult: {
+        type: 'object',
+        properties: {
+          success: {
+            type: 'boolean',
+            description: 'Whether the script executed successfully'
+          },
+          result: {
+            description: 'Script execution result'
+          },
+          error: {
+            type: 'string',
+            description: 'Error message if execution failed'
+          },
+          executionTime: {
+            type: 'number',
+            description: 'Execution time in milliseconds'
+          }
+        }
       },
       Collection: {
         type: 'object',
@@ -577,6 +714,472 @@ class OpenApiGenerator {
   }
 
   /**
+   * Generate script API paths
+   */
+  generateScriptPaths() {
+    return {
+      '/api/scripts': {
+        get: {
+          tags: ['Scripts'],
+          summary: 'List all event scripts',
+          description: 'Get all configured event scripts with their settings',
+          responses: {
+            200: {
+              description: 'List of event scripts',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          scripts: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/EventScript' }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          tags: ['Scripts'],
+          summary: 'Create event script',
+          description: 'Create a new event script with rate limiting configuration',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/EventScript' }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Script created successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ApiResponse' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/scripts/{id}': {
+        get: {
+          tags: ['Scripts'],
+          summary: 'Get event script by ID',
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Script ID'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Event script details',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/EventScript' }
+                }
+              }
+            }
+          }
+        },
+        put: {
+          tags: ['Scripts'],
+          summary: 'Update event script',
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Script ID'
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/EventScript' }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Script updated successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ApiResponse' }
+                }
+              }
+            }
+          }
+        },
+        delete: {
+          tags: ['Scripts'],
+          summary: 'Delete event script',
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Script ID'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Script deleted successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ApiResponse' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/scripts/{id}/test': {
+        post: {
+          tags: ['Scripts'],
+          summary: 'Test event script execution',
+          description: 'Execute a script with test payload to verify functionality',
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Script ID'
+            }
+          ],
+          requestBody: {
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    testPayload: {
+                      type: 'object',
+                      description: 'Custom test payload (optional)'
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Script test result',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ScriptExecutionResult' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/scripts/stats': {
+        get: {
+          tags: ['Scripts'],
+          summary: 'Get script execution statistics',
+          description: 'Get statistics about script executions including success rates and performance metrics',
+          responses: {
+            200: {
+              description: 'Script execution statistics',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      totalScripts: { type: 'integer' },
+                      activeScripts: { type: 'integer' },
+                      totalExecutions: { type: 'integer' },
+                      successfulExecutions: { type: 'integer' },
+                      failedExecutions: { type: 'integer' },
+                      averageExecutionTime: { type: 'number' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/scripts/schedule': {
+        get: {
+          tags: ['Scheduled Scripts'],
+          summary: 'List all scheduled scripts',
+          description: 'Get all configured scheduled scripts with their cron settings',
+          responses: {
+            200: {
+              description: 'List of scheduled scripts',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          schedules: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/ScheduledScript' }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          tags: ['Scheduled Scripts'],
+          summary: 'Create scheduled script',
+          description: 'Create a new scheduled script with cron expression',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ScheduledScript' }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Scheduled script created successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ApiResponse' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/scripts/schedule/{name}': {
+        get: {
+          tags: ['Scheduled Scripts'],
+          summary: 'Get scheduled script by name',
+          parameters: [
+            {
+              name: 'name',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Scheduled script name'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Scheduled script details',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ScheduledScript' }
+                }
+              }
+            }
+          }
+        },
+        put: {
+          tags: ['Scheduled Scripts'],
+          summary: 'Update scheduled script',
+          parameters: [
+            {
+              name: 'name',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Scheduled script name'
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ScheduledScript' }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Scheduled script updated successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ApiResponse' }
+                }
+              }
+            }
+          }
+        },
+        delete: {
+          tags: ['Scheduled Scripts'],
+          summary: 'Delete scheduled script',
+          parameters: [
+            {
+              name: 'name',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Scheduled script name'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Scheduled script deleted successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ApiResponse' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/scripts/schedule/{name}/pause': {
+        post: {
+          tags: ['Scheduled Scripts'],
+          summary: 'Pause scheduled script',
+          description: 'Pause execution of a scheduled script',
+          parameters: [
+            {
+              name: 'name',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Scheduled script name'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Scheduled script paused successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ApiResponse' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/scripts/schedule/{name}/resume': {
+        post: {
+          tags: ['Scheduled Scripts'],
+          summary: 'Resume scheduled script',
+          description: 'Resume execution of a paused scheduled script',
+          parameters: [
+            {
+              name: 'name',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Scheduled script name'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Scheduled script resumed successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ApiResponse' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/scripts/scheduled/{name}/trigger': {
+        post: {
+          tags: ['Scheduled Scripts'],
+          summary: 'Manually trigger scheduled script',
+          description: 'Execute a scheduled script immediately regardless of schedule',
+          parameters: [
+            {
+              name: 'name',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Scheduled script name'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Scheduled script triggered successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ScriptExecutionResult' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/scripts/cron/validate': {
+        post: {
+          tags: ['Scheduled Scripts'],
+          summary: 'Validate cron expression',
+          description: 'Validate and parse a cron expression to check if it is valid',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    cronExpression: {
+                      type: 'string',
+                      description: 'Cron expression to validate',
+                      example: '0 */1 * * *'
+                    }
+                  },
+                  required: ['cronExpression']
+                }
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Cron expression validation result',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      valid: { type: 'boolean' },
+                      message: { type: 'string' },
+                      nextExecutions: {
+                        type: 'array',
+                        items: { type: 'string', format: 'date-time' },
+                        description: 'Next few execution times'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+  }
+
+  /**
    * Generate dynamic collection paths
    */
   generateCollectionPaths(collections, schemas) {
@@ -587,7 +1190,7 @@ class OpenApiGenerator {
       const schemaName = this.capitalizeCollectionName(collectionName);
       
       // Collection CRUD operations
-      paths[`/api/${collectionName}`] = {
+      paths[`/api/db/${collectionName}`] = {
         get: {
           tags: [collectionName],
           summary: `List ${collectionName} documents`,
@@ -663,7 +1266,7 @@ class OpenApiGenerator {
       };
 
       // Individual document operations
-      paths[`/api/${collectionName}/{id}`] = {
+      paths[`/api/db/${collectionName}/{id}`] = {
         get: {
           tags: [collectionName],
           summary: `Get ${collectionName} document by ID`,

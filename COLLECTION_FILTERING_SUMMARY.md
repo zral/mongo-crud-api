@@ -40,50 +40,48 @@
 
 1. **Basic Field Filtering**
    ```
-   GET /api/users?department=Sales
+   GET /api/db/users?department=Sales
    → Returns: 2 users in Sales department ✅
    ```
 
 2. **Name Filtering**
    ```
-   GET /api/users?name=John%20Doe  
+   GET /api/db/users?name=John%20Doe  
    → Returns: 2 users named "John Doe" ✅
    ```
 
-3. **Status Filtering**
+3. **Status Filtering**  
    ```
-   GET /api/users?status=active
+   GET /api/db/users?status=active
    → Returns: 1 active user ✅
-   ```
-
-### **🔄 Advanced Features Ready for Testing:**
+   ```### **🔄 Advanced Features Ready for Testing:**
 
 The following advanced features are implemented in code and ready for testing once properly URL-encoded:
 
 1. **Comparison Operators**
    ```
-   GET /api/users?age=%3E25     (age > 25)
-   GET /api/users?age=%3C%3D30  (age <= 30)
+   GET /api/db/users?age=%3E25     (age > 25)
+   GET /api/db/users?age=%3C%3D30  (age <= 30)
    ```
 
 2. **Range Filtering**
    ```
-   GET /api/users?age=25..35    (age between 25-35)
+   GET /api/db/users?age=25..35    (age between 25-35)
    ```
 
 3. **Multiple Values**
    ```
-   GET /api/users?department=Sales,Marketing
+   GET /api/db/users?department=Sales,Marketing
    ```
 
 4. **Field Projection**
    ```
-   GET /api/users?fields=name,email,age
+   GET /api/db/users?fields=name,email,age
    ```
 
 5. **Combined Filters**
    ```
-   GET /api/users?department=Sales&age=%3E30&fields=name,email
+   GET /api/db/users?department=Sales&age=%3E30&fields=name,email
    ```
 
 ## 📊 **Filter Syntax Reference:**
@@ -117,31 +115,31 @@ The following advanced features are implemented in code and ready for testing on
 ### **PowerShell Testing Commands:**
 ```powershell
 # Basic filtering
-Invoke-RestMethod -Uri 'http://localhost:3001/api/users?department=Sales'
+Invoke-RestMethod -Uri 'http://localhost:3001/api/db/users?department=Sales'
 
 # Multiple conditions
-Invoke-RestMethod -Uri 'http://localhost:3001/api/users?department=Sales&age=35'
+Invoke-RestMethod -Uri 'http://localhost:3001/api/db/users?department=Sales&age=35'
 
 # Field projection (return only name and email)
-Invoke-RestMethod -Uri 'http://localhost:3001/api/users?fields=name,email'
+Invoke-RestMethod -Uri 'http://localhost:3001/api/db/users?fields=name,email'
 
 # Complex filtering with URL encoding
-Invoke-RestMethod -Uri 'http://localhost:3001/api/users?age=%3E30&department=Sales'
+Invoke-RestMethod -Uri 'http://localhost:3001/api/db/users?age=%3E30&department=Sales'
 ```
 
 ### **cURL Testing Commands:**
 ```bash
 # Basic filtering
-curl "http://localhost:3001/api/users?department=Sales"
+curl "http://localhost:3001/api/db/users?department=Sales"
 
 # Range filtering
-curl "http://localhost:3001/api/users?age=25..40"
+curl "http://localhost:3001/api/db/users?age=25..40"
 
 # Field projection
-curl "http://localhost:3001/api/users?fields=name,email,age"
+curl "http://localhost:3001/api/db/users?fields=name,email,age"
 
 # Complex MongoDB query
-curl "http://localhost:3001/api/users?filter.age=%7B%22%24gte%22%3A25%2C%22%24lte%22%3A40%7D"
+curl "http://localhost:3001/api/db/users?filter.age=%7B%22%24gte%22%3A25%2C%22%24lte%22%3A40%7D"
 ```
 
 ## ✅ **Achievement Summary:**

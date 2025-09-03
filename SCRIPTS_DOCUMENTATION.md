@@ -185,22 +185,28 @@ Every script receives a `payload` object containing:
 Built-in HTTP client for making requests:
 
 ```javascript
+### API Client (`api`)
+
+Built-in HTTP client for making requests:
+
+```javascript
 // GET request
-const users = await api.get('/api/users?status=active');
+const users = await api.get('/api/db/users?status=active');
 
 // POST request
-const newDoc = await api.post('/api/notifications', {
+const newDoc = await api.post('/api/db/notifications', {
   message: "Welcome!",
   userId: payload.data.document._id
 });
 
 // PUT request
-const updated = await api.put('/api/users/123', {
+const updated = await api.put('/api/db/users/123', {
   lastLogin: new Date()
 });
+```
 
 // DELETE request
-await api.delete('/api/temp_data/456');
+await api.delete('/api/db/temp_data/456');
 ```
 
 ### Utility Functions (`utils`)
@@ -287,7 +293,7 @@ if (payload.event === 'update' && payload.collection === 'orders') {
         }
       };
       
-      const result = await api.post('/api/notifications', notification);
+      const result = await api.post('/api/db/notifications', notification);
       utils.log('Status notification sent:', result.data._id);
       
       return { 
@@ -342,7 +348,7 @@ if (payload.event === 'update' && payload.collection === 'orders') {
           
           // Create low stock alert if needed
           if (newQuantity <= 5) {
-            await api.post('/api/alerts', {
+            await api.post('/api/db/alerts', {
               type: 'low_stock',
               productId: item.productId,
               currentQuantity: newQuantity,
@@ -387,7 +393,7 @@ if (payload.event === 'create' && payload.collection === 'products') {
   
   // Check for duplicate SKU
   try {
-    const existing = await api.get(`/api/products?sku=${product.sku}`);
+    const existing = await api.get(`/api/db/products?sku=${product.sku}`);
     if (existing.data.length > 0) {
       utils.error('Duplicate SKU found:', product.sku);
       return { success: false, error: 'SKU already exists' };
@@ -407,7 +413,7 @@ if (payload.event === 'create' && payload.collection === 'products') {
   
   try {
     // Update the product with enhanced data
-    await api.put(`/api/products/${product._id}`, enhancedData);
+    await api.put(`/api/db/products/${product._id}`, enhancedData);
     utils.log('Product enhanced with additional data:', enhancedData);
     
     return { 
@@ -470,12 +476,12 @@ if (sensitiveCollections.includes(payload.collection)) {
   }
   
   try {
-    const auditResult = await api.post('/api/audit_logs', auditEntry);
+    const auditResult = await api.post('/api/db/audit_logs', auditEntry);
     utils.log('Audit log created:', auditResult.data._id);
     
     // Create alert for critical changes
     if (payload.collection === 'permissions' || payload.collection === 'admin_settings') {
-      await api.post('/api/security_alerts', {
+      await api.post('/api/db/security_alerts', {
         type: 'sensitive_data_change',
         collection: payload.collection,
         operation: payload.event,
@@ -540,7 +546,7 @@ Control when scripts execute:
 
 ```javascript
 try {
-  const result = await api.post('/api/collection', data);
+  const result = await api.post('/api/db/collection', data);
   utils.log('Operation successful:', result.data._id);
   return { success: true, data: result.data };
 } catch (error) {

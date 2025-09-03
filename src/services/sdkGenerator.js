@@ -295,7 +295,7 @@ export class ${className} extends BaseClient {
     });
 
     const queryString = params.toString();
-    const endpoint = \`/api/\${this.collectionName}\${queryString ? \`?\${queryString}\` : ''}\`;
+    const endpoint = \`/api/db/\${this.collectionName}\${queryString ? \`?\${queryString}\` : ''}\`;
     
     return this.request<PaginatedResponse<${interfaceName}>>(endpoint);
   }
@@ -304,7 +304,7 @@ export class ${className} extends BaseClient {
    * Get a specific ${collection.name} document by ID
    */
   async get(id: string): Promise<${interfaceName}> {
-    const response = await this.request<ApiResponse<${interfaceName}>>(\`/api/\${this.collectionName}/\${id}\`);
+    const response = await this.request<ApiResponse<${interfaceName}>>(\`/api/db/\${this.collectionName}/\${id}\`);
     return response.data!;
   }
 
@@ -312,7 +312,7 @@ export class ${className} extends BaseClient {
    * Create a new ${collection.name} document
    */
   async create(document: Omit<${interfaceName}, '_id'>): Promise<${interfaceName}> {
-    const response = await this.request<ApiResponse<${interfaceName}>>(\`/api/\${this.collectionName}\`, {
+    const response = await this.request<ApiResponse<${interfaceName}>>(\`/api/db/\${this.collectionName}\`, {
       method: 'POST',
       body: JSON.stringify(document)
     });
@@ -323,7 +323,7 @@ export class ${className} extends BaseClient {
    * Update an existing ${collection.name} document
    */
   async update(id: string, document: Partial<${interfaceName}>): Promise<${interfaceName}> {
-    const response = await this.request<ApiResponse<${interfaceName}>>(\`/api/\${this.collectionName}/\${id}\`, {
+    const response = await this.request<ApiResponse<${interfaceName}>>(\`/api/db/\${this.collectionName}/\${id}\`, {
       method: 'PUT',
       body: JSON.stringify(document)
     });
@@ -334,7 +334,7 @@ export class ${className} extends BaseClient {
    * Delete a ${collection.name} document
    */
   async delete(id: string): Promise<void> {
-    await this.request(\`/api/\${this.collectionName}/\${id}\`, {
+    await this.request(\`/api/db/\${this.collectionName}/\${id}\`, {
       method: 'DELETE'
     });
   }

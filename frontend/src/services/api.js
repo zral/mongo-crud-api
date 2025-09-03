@@ -42,19 +42,19 @@ export const apiService = {
 
   // Collection data operations
   getCollectionData: (collection, params = {}) => 
-    api.get(`/api/${collection}`, { params }),
+    api.get(`/api/db/${collection}`, { params }),
   
   createDocument: (collection, data) => 
-    api.post(`/api/${collection}`, data),
+    api.post(`/api/db/${collection}`, data),
   
   updateDocument: (collection, id, data) => 
-    api.put(`/api/${collection}/${id}`, data),
+    api.put(`/api/db/${collection}/${id}`, data),
   
   deleteDocument: (collection, id) => 
-    api.delete(`/api/${collection}/${id}`),
+    api.delete(`/api/db/${collection}/${id}`),
   
   getDocument: (collection, id) => 
-    api.get(`/api/${collection}/${id}`),
+    api.get(`/api/db/${collection}/${id}`),
 
   // Webhook management
   listWebhooks: () => api.get('/api/webhooks'),

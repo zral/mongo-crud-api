@@ -111,11 +111,11 @@ curl http://localhost:3003/api/management/collections
 Dynamic endpoints for each collection `{collection}`:
 
 ```http
-GET    /api/{collection}           # Get all documents with filtering
-GET    /api/{collection}/{id}      # Get document by ID
-POST   /api/{collection}           # Create new document
-PUT    /api/{collection}/{id}      # Update document by ID
-DELETE /api/{collection}/{id}      # Delete document by ID
+GET    /api/db/{collection}           # Get all documents with filtering
+GET    /api/db/{collection}/{id}      # Get document by ID
+POST   /api/db/{collection}           # Create new document
+PUT    /api/db/{collection}/{id}      # Update document by ID
+DELETE /api/db/{collection}/{id}      # Delete document by ID
 ```
 
 ### **Advanced Collection Filtering**
@@ -123,22 +123,22 @@ Support for MongoDB-style queries with comparison operators:
 
 ```bash
 # Basic filtering
-GET /api/users?filter={"status":"active"}
+GET /api/db/users?filter={"status":"active"}
 
 # Comparison operators  
-GET /api/users?filter={"age":{"$gte":18,"$lt":65}}
+GET /api/db/users?filter={"age":{"$gte":18,"$lt":65}}
 
 # Array operators
-GET /api/products?filter={"category":{"$in":["electronics","books"]}}
+GET /api/db/products?filter={"category":{"$in":["electronics","books"]}}
 
 # Regular expressions
-GET /api/users?filter={"email":{"$regex":".*@company\\.com$"}}
+GET /api/db/users?filter={"email":{"$regex":".*@company\\.com$"}}
 
 # Complex filtering with logical operators
-GET /api/orders?filter={"$and":[{"total":{"$gte":100}},{"status":"pending"}]}
+GET /api/db/orders?filter={"$and":[{"total":{"$gte":100}},{"status":"pending"}]}
 
 # Pagination and sorting
-GET /api/users?page=2&limit=20&sort=-createdAt
+GET /api/db/users?page=2&limit=20&sort=-createdAt
 ```
 
 ### **Management API**
@@ -248,9 +248,9 @@ GET    /api/sdk/docs                  # Interactive Swagger UI documentation
 ### **Bulk Data Upload API**
 
 ```http
-POST   /api/bulk/{collection}/preview # Preview CSV/Excel file before upload
-POST   /api/bulk/{collection}/upload  # Upload bulk data from CSV/Excel files
-GET    /api/bulk/{collection}/template # Download CSV template for collection
+POST   /api/db/bulk/{collection}/preview # Preview CSV/Excel file before upload
+POST   /api/db/bulk/{collection}/upload  # Upload bulk data from CSV/Excel files
+GET    /api/db/bulk/{collection}/template # Download CSV template for collection
 ```
 
 **Bulk Upload Example:**
@@ -258,16 +258,16 @@ GET    /api/bulk/{collection}/template # Download CSV template for collection
 # Preview a CSV file before uploading
 curl -X POST -F "file=@employees.csv" \
   -F "previewRows=5" \
-  http://localhost:3003/api/bulk/employees/preview
+  http://localhost:3003/api/db/bulk/employees/preview
 
 # Upload CSV with options
 curl -X POST -F "file=@employees.csv" \
   -F "updateOnDuplicate=true" \
   -F "batchSize=1000" \
-  http://localhost:3003/api/bulk/employees/upload
+  http://localhost:3003/api/db/bulk/employees/upload
 
 # Download template
-curl -X GET "http://localhost:3003/api/bulk/employees/template?sampleData=true" \
+curl -X GET "http://localhost:3003/api/db/bulk/employees/template?sampleData=true" \
   -o employees_template.csv
 ```
 
@@ -556,21 +556,21 @@ Each script runs with access to the following objects:
 #### **`api`** - HTTP Client
 ```javascript
 // GET request
-const users = await api.get('/api/users?limit=10');
+const users = await api.get('/api/db/users?limit=10');
 
 // POST request  
-const newDoc = await api.post('/api/notifications', {
+const newDoc = await api.post('/api/db/notifications', {
   message: "Hello World",
   type: "info"
 });
 
 // PUT request
-const updated = await api.put('/api/users/123', {
+const updated = await api.put('/api/db/users/123', {
   lastLogin: new Date()
 });
 
 // DELETE request
-await api.delete('/api/temp_data/456');
+await api.delete('/api/db/temp_data/456');
 ```
 
 #### **`utils`** - Utility Functions
@@ -868,7 +868,7 @@ const webhook = await sdk.webhooks.create({
 - `limit` - Items per page (default: 10, max: 100)
 - `sort` - Sort field (prefix with - for descending)
 
-Example: `GET /api/users?page=2&limit=20&sort=-createdAt`
+Example: `GET /api/db/users?page=2&limit=20&sort=-createdAt`
 
 ## 🖥️ React Frontend Features
 
@@ -979,7 +979,7 @@ The bulk data upload functionality allows you to import large datasets from CSV 
 ```bash
 curl -X POST -F "file=@employees.csv" \
   -F "previewRows=10" \
-  http://localhost:3003/api/bulk/employees/preview
+  http://localhost:3003/api/db/bulk/employees/preview
 ```
 
 **Upload with Options:**
@@ -988,12 +988,12 @@ curl -X POST -F "file=@employees.csv" \
   -F "updateOnDuplicate=true" \
   -F "skipValidation=false" \
   -F "batchSize=1000" \
-  http://localhost:3003/api/bulk/employees/upload
+  http://localhost:3003/api/db/bulk/employees/upload
 ```
 
 **Download Template:**
 ```bash
-curl -X GET "http://localhost:3003/api/bulk/employees/template?sampleData=true" \
+curl -X GET "http://localhost:3003/api/db/bulk/employees/template?sampleData=true" \
   -H "Accept: text/csv" \
   -o employees_template.csv
 ```

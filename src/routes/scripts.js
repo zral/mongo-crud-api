@@ -343,7 +343,7 @@ router.post('/:id/test', async (req, res) => {
       },
       request: {
         method: 'POST',
-        url: `/api/${script.collection}`,
+        url: `/api/db/${script.collection}`,
         headers: {
           'content-type': 'application/json',
           'user-agent': 'test-client/1.0'
