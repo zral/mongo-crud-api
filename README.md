@@ -17,16 +17,6 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 - **Intelligent Data Processing**: Automatic type detection (numbers, dates, booleans)
 - **Batch Processing**: Configurable batch sizes for large file uploads (up to 10MB)
 
-## 🚀 Features
-
-### **Core Functionality**
-- **Dynamic Collection Exposure**: Automatically exposes all MongoDB collections as REST endpoints
-- **Full CRUD Operations**: Complete Create, Read, Update, Delete operations for each collection
-- **Advanced Filtering**: MongoDB-style query filters with comparison operators, ranges, and regex
-- **Auto-Discovery**: New collections are automatically available as endpoints
-- **Management API**: Add and remove collections through REST endpoints
-- **Bulk Data Upload**: Import CSV and Excel files with intelligent data processing and error handling
-
 ### **Enterprise Webhook System**
 - **Real-time Event Delivery**: HTTP webhooks triggered by database operations (create, update, delete)
 - **Advanced Rate Limiting**: Per-webhook rate limits (1-300 req/min) with sliding window algorithm
@@ -92,95 +82,6 @@ MongoDB: localhost:27017
 ### Quick API test
 ```bash
 curl http://localhost:3003/api/management/collections
-```
-- **Update Options**: Configurable upsert behavior for duplicate handling
-### **SDK Generation & Documentation**
-- **TypeScript SDK Generation**: Auto-generated type-safe client libraries
-- **OpenAPI/Swagger Specification**: Complete API documentation with interactive explorer
-- **Schema Discovery**: Intelligent schema inference from existing data
-- **Multi-Language Support**: Ready for SDK generation in any language supporting OpenAPI
-- **Interactive Documentation**: Swagger UI at `/api/sdk/docs` with live API testing
-
-### **Enterprise Webhook System**
-- **Real-time Event Delivery**: HTTP webhooks triggered by database operations
-- **Advanced Rate Limiting**: Per-webhook rate limits (1-300 req/min) with sliding window algorithm
-- **Intelligent Retry System**: Exponential backoff retry mechanism with configurable limits
-- **MongoDB-Style Filtering**: Complex document filtering for selective webhook triggering
-- **Comprehensive Management**: Full CRUD operations for webhook configuration
-
-### **Resilience & Performance**
-- **Database Connection Retry**: Exponential backoff reconnection with health monitoring
-- **Background Processing**: Asynchronous webhook delivery with queue management
-- **Circuit Breaker**: Automatic failure detection and recovery
-- **Production-Ready**: Health checks, error handling, and comprehensive logging
-
-### **Modern Web Interface**
-- **React Frontend**: Modern web interface with responsive design
-- **Real-time Management**: Live webhook and collection management
-- **Bulk Data Upload Interface**: Drag-and-drop file upload with preview functionality
-- **Data Import Wizard**: Step-by-step guide for CSV/Excel imports with validation
-- **Rate Limit Configuration**: Visual rate limit setup with validation
-- **Statistics Dashboard**: Real-time delivery statistics and monitoring
-
-### **DevOps Ready**
-- **Docker Support**: Multi-stage containerized builds with minimal Alpine images
-- **Docker Compose**: Complete orchestration with MongoDB, API, and Frontend
-- **Health Monitoring**: Built-in health checks and system monitoring
-- **Testing Suite**: Comprehensive test scripts for all functionality
-
-## Components
-
-- **Backend API**: Node.js Express server with MongoDB integration
-- **Frontend**: React application with modern UI for data management
-- **Database**: MongoDB with optimized `mongo:7` image
-
-## 🌐 SaaS Landing Page
-
-A professional marketing landing page is available that positions this solution as **"CrudAPI Pro"** - a compelling SaaS product for developers who need instant backend solutions.
-
-**View the landing page**: [`landing.html`](./landing.html)
-
-The landing page includes:
-- 🎯 **Compelling value proposition**: "Stop Building Backends. Start Building Dreams"
-- 💰 **Professional pricing tiers**: Freemium to Enterprise ($0-$99/month)
-- 🏆 **Developer testimonials** showcasing time savings and productivity gains
-- ⚡ **Feature highlights** emphasizing speed, ease-of-use, and production readiness
-- 🔗 **Live demo links** connecting directly to your running application
-
-Perfect for presenting this solution to stakeholders, investors, or as a foundation for a commercial SaaS offering.
-
-## 🎯 Quick Start
-
-```bash
-
-# Start all services with Docker Compose
-docker-compose up -d
-
-
-# Access the application
-Frontend: http://localhost:3002
-API: http://localhost:3003  
-MongoDB: localhost:27017
-
-# Quick API test
-curl http://localhost:3003/api/management/collections
-
-# Create a webhook with rate limiting
-curl -X POST http://localhost:3003/api/webhooks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "User Events",
-    "url": "https://httpbin.org/post",
-    "collection": "users",
-    "events": ["create", "update"],
-    "filters": {"status": "active"},
-    "rateLimit": {
-      "maxRequestsPerMinute": 120,
-      "maxRetries": 3,
-      "baseDelayMs": 1000,
-      "maxDelayMs": 30000
-    }
-  }'
 ```
 
 ## 📡 API Endpoints
@@ -587,24 +488,6 @@ const webhook = await sdk.webhooks.create({
 
 Example: `GET /api/users?page=2&limit=20&sort=-createdAt`
 
-## Quick Start
-
-### Using Docker Compose (Recommended)
-
-```bash
-# Start the application and MongoDB
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f
-
-# Stop the application
-docker-compose down
-```
-
-The API will be available at `http://localhost:3003`
-The React Frontend will be available at `http://localhost:3002`
-
 ## 🖥️ React Frontend Features
 
 ### **Modern Web Interface**
@@ -648,7 +531,7 @@ The React frontend provides comprehensive management capabilities with a profess
 - **Keyboard Shortcuts**: Efficient navigation and operation shortcuts
 - **Dark/Light Theme**: Theme selection for user preference
 
-## � Bulk Data Upload & Processing
+## 📦 Bulk Data Upload & Processing
 
 ### **Overview**
 The bulk data upload functionality allows you to import large datasets from CSV and Excel files directly into MongoDB collections through both the API and web interface. This powerful feature streamlines data migration, initial database population, and ongoing data synchronization tasks that would otherwise require complex scripting or manual data entry.
