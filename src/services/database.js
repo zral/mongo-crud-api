@@ -317,52 +317,87 @@ class DatabaseService {
     }
   }
 
-  // CRUD operations
+    // CRUD operations
   async findDocuments(collectionName, filter = {}, options = {}) {
     try {
       const collection = this.db.collection(collectionName);
       const { page = 1, limit = 10, sort, fields } = options;
       
-      // Validate pagination
-      const pageNum = Math.max(1, parseInt(page));
-      const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-      const skip = (pageNum - 1) * limitNum;
-
-      // Build query with projection
-      let query = collection.find(filter);
+      // Check if pagination is disabled (for CSV export)
+      const noPagination = page === null || limit === null;
       
-      // Apply field projection if specified
-      if (fields && Object.keys(fields).length > 0) {
-        query = query.project(fields);
-      }
+      let documents, total;
       
-      // Apply pagination
-      query = query.skip(skip).limit(limitNum);
-
-      // Apply sorting
-      if (sort) {
-        const sortObj = {};
-        if (sort.startsWith('-')) {
-          sortObj[sort.substring(1)] = -1;
-        } else {
-          sortObj[sort] = 1;
+      if (noPagination) {
+        // No pagination - return all matching documents
+        let query = collection.find(filter);
+        
+        // Apply field projection if specified
+        if (fields && Object.keys(fields).length > 0) {
+          query = query.project(fields);
         }
-        query = query.sort(sortObj);
+        
+        // Apply sorting
+        if (sort) {
+          const sortObj = {};
+          if (sort.startsWith('-')) {
+            sortObj[sort.substring(1)] = -1;
+          } else {
+            sortObj[sort] = 1;
+          }
+          query = query.sort(sortObj);
+        }
+        
+        documents = await query.toArray();
+        total = documents.length;
+        
+        return {
+          data: documents,
+          pagination: null, // No pagination info for full export
+          filter: filter
+        };
+      } else {
+        // Standard pagination
+        const pageNum = Math.max(1, parseInt(page));
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+        const skip = (pageNum - 1) * limitNum;
+
+        // Build query with projection
+        let query = collection.find(filter);
+        
+        // Apply field projection if specified
+        if (fields && Object.keys(fields).length > 0) {
+          query = query.project(fields);
+        }
+        
+        // Apply pagination
+        query = query.skip(skip).limit(limitNum);
+
+        // Apply sorting
+        if (sort) {
+          const sortObj = {};
+          if (sort.startsWith('-')) {
+            sortObj[sort.substring(1)] = -1;
+          } else {
+            sortObj[sort] = 1;
+          }
+          query = query.sort(sortObj);
+        }
+
+        documents = await query.toArray();
+        total = await collection.countDocuments(filter);
+
+        return {
+          data: documents,
+          pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total,
+            pages: Math.ceil(total / limitNum)
+          },
+          filter: filter // Include applied filter in response
+        };
       }
-
-      const documents = await query.toArray();
-      const total = await collection.countDocuments(filter);
-
-      return {
-        data: documents,
-        pagination: {
-          page: pageNum,
-          limit: limitNum,
-          total,
-          pages: Math.ceil(total / limitNum)
-        },
-        filter: filter // Include applied filter in response
-      };
     } catch (error) {
       throw new Error(`Failed to find documents: ${error.message}`);
     }

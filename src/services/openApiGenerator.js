@@ -1194,7 +1194,7 @@ class OpenApiGenerator {
         get: {
           tags: [collectionName],
           summary: `List ${collectionName} documents`,
-          description: `Retrieve paginated list of documents from ${collectionName} collection with advanced filtering`,
+          description: `Retrieve paginated list of documents from ${collectionName} collection with advanced filtering. Supports both JSON and CSV output formats.`,
           parameters: [
             {
               name: 'page',
@@ -1225,6 +1225,12 @@ class OpenApiGenerator {
               in: 'query',
               schema: { type: 'string' },
               description: 'MongoDB-style filter query (JSON string)'
+            },
+            {
+              name: 'format',
+              in: 'query',
+              schema: { type: 'string', enum: ['json', 'csv'] },
+              description: 'Response format (json or csv). CSV format exports all data without pagination.'
             }
           ],
           responses: {
@@ -1233,6 +1239,13 @@ class OpenApiGenerator {
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/PaginatedResponse' }
+                },
+                'text/csv': {
+                  schema: {
+                    type: 'string',
+                    description: 'CSV format export of collection data'
+                  },
+                  example: 'id,name,email\n1,John Doe,john@example.com\n2,Jane Smith,jane@example.com'
                 }
               }
             }

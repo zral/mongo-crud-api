@@ -111,11 +111,29 @@ curl http://localhost:3003/api/management/collections
 Dynamic endpoints for each collection `{collection}`:
 
 ```http
-GET    /api/db/{collection}           # Get all documents with filtering
+GET    /api/db/{collection}           # Get all documents with filtering (JSON/CSV)
 GET    /api/db/{collection}/{id}      # Get document by ID
 POST   /api/db/{collection}           # Create new document
 PUT    /api/db/{collection}/{id}      # Update document by ID
 DELETE /api/db/{collection}/{id}      # Delete document by ID
+```
+
+### **CSV Export Support**
+Collection endpoints support CSV format for data export:
+
+```bash
+# Export as CSV using format parameter
+GET /api/db/users?format=csv
+
+# Export as CSV using Accept header
+GET /api/db/users
+Accept: text/csv
+
+# CSV export with filtering
+GET /api/db/users?status=active&format=csv
+
+# CSV export with field selection
+GET /api/db/users?fields=name,email,age&format=csv
 ```
 
 ### **Advanced Collection Filtering**
@@ -140,6 +158,48 @@ GET /api/db/orders?filter={"$and":[{"total":{"$gte":100}},{"status":"pending"}]}
 # Pagination and sorting
 GET /api/db/users?page=2&limit=20&sort=-createdAt
 ```
+
+## 📊 **CSV Data Export**
+
+Collection endpoints support CSV format for easy data export and analysis:
+
+### **CSV Export Methods**
+
+```bash
+# Method 1: Using format parameter
+curl "http://localhost:3003/api/db/users?format=csv" -o users.csv
+
+# Method 2: Using Accept header
+curl -H "Accept: text/csv" "http://localhost:3003/api/db/users" -o users.csv
+
+# Method 3: Using Accept header with application/csv
+curl -H "Accept: application/csv" "http://localhost:3003/api/db/products" -o products.csv
+```
+
+### **CSV Export with Filtering**
+
+```bash
+# Export filtered data
+curl "http://localhost:3003/api/db/users?status=active&format=csv" -o active_users.csv
+
+# Export with field selection
+curl "http://localhost:3003/api/db/users?fields=name,email,department&format=csv" -o user_contacts.csv
+
+# Export with complex filtering
+curl "http://localhost:3003/api/db/orders?filter={\"total\":{\"$gte\":100}}&format=csv" -o large_orders.csv
+
+# Export with date range
+curl "http://localhost:3003/api/db/logs?createdAt=2024-01-01..2024-12-31&format=csv" -o yearly_logs.csv
+```
+
+### **CSV Export Features**
+
+- **Automatic Headers**: Field names automatically used as CSV headers
+- **All Data Types**: Supports strings, numbers, dates, booleans, and objects
+- **No Pagination**: CSV export includes all matching records (ignores page/limit)
+- **Nested Objects**: Complex objects are flattened or JSON-stringified
+- **File Download**: Proper Content-Disposition headers for file downloads
+- **Empty Collections**: Returns empty CSV with headers when no data exists
 
 ### **Management API**
 

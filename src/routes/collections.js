@@ -1,6 +1,7 @@
 const express = require('express');
 const dbService = require('../services/database');
 const FilterService = require('../services/filterService');
+const { Parser } = require('json2csv');
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ const validateCollectionName = (req, res, next) => {
 router.get('/:collection', validateCollectionName, async (req, res, next) => {
   try {
     const { collection } = req.params;
-    const { page, limit, sort, fields, ...queryParams } = req.query;
+    const { page, limit, sort, fields, format, ...queryParams } = req.query;
 
     // Check if collection exists
     const exists = await dbService.collectionExists(collection);
@@ -47,16 +48,76 @@ router.get('/:collection', validateCollectionName, async (req, res, next) => {
     // Parse field selection for projection
     const projection = FilterService.parseFieldSelection(fields);
 
+    // Check if CSV format is requested
+    const acceptHeader = req.get('Accept');
+    const requestsCSV = format === 'csv' || acceptHeader === 'text/csv' || acceptHeader === 'application/csv';
+    
     // Build options object
     const options = { 
-      page, 
-      limit, 
+      page: requestsCSV ? null : page,  // Disable pagination for CSV
+      limit: requestsCSV ? null : limit, // Disable limit for CSV
       sort,
       fields: projection
     };
 
     const result = await dbService.findDocuments(collection, filter, options);
     
+    if (requestsCSV) {
+      // Convert to CSV format
+      if (!result.data || result.data.length === 0) {
+        // Return empty CSV with headers if no data
+        res.set({
+          'Content-Type': 'text/csv',
+          'Content-Disposition': `attachment; filename="${collection}.csv"`
+        });
+        return res.send('');
+      }
+
+      try {
+        // Get all unique fields from the data for CSV headers
+        const allFields = new Set();
+        result.data.forEach(doc => {
+          Object.keys(doc).forEach(key => allFields.add(key));
+        });
+
+        const parser = new Parser({
+          fields: Array.from(allFields),
+          transforms: [
+            // Handle nested objects by converting to JSON strings
+            (item) => {
+              const transformed = {};
+              for (const [key, value] of Object.entries(item)) {
+                if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+                  transformed[key] = JSON.stringify(value);
+                } else if (Array.isArray(value)) {
+                  transformed[key] = value.join('; ');
+                } else {
+                  transformed[key] = value;
+                }
+              }
+              return transformed;
+            }
+          ]
+        });
+        
+        const csv = parser.parse(result.data);
+        
+        res.set({
+          'Content-Type': 'text/csv',
+          'Content-Disposition': `attachment; filename="${collection}.csv"`
+        });
+        
+        return res.send(csv);
+      } catch (csvError) {
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to convert data to CSV format',
+          details: csvError.message
+        });
+      }
+    }
+    
+    // Default JSON response
     res.json({
       success: true,
       collection,
