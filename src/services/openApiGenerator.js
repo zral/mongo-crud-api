@@ -23,7 +23,27 @@ class OpenApiGenerator {
         info: {
           title: 'MongoDB CRUD REST API',
           version: '1.0.0',
-          description: 'Dynamic MongoDB collection management with CRUD operations, webhooks, event scripts, scheduled scripts, and advanced filtering',
+          description: `Dynamic MongoDB collection management with comprehensive features:
+
+**Core Features:**
+- Full CRUD operations for all MongoDB collections
+- Advanced filtering with MongoDB-style queries
+- Webhook system for real-time event notifications
+- JavaScript automation engine with event scripts and cron scheduling
+- CSV export functionality for data analysis
+
+**CSV Export Capabilities:**
+- Export collection data in CSV format for analysis and reporting
+- Support via Accept headers (text/csv, application/csv) or ?format=csv parameter
+- Automatic field detection and header generation
+- Smart data conversion (nested objects, arrays, dates)
+- Works with all filtering and field selection parameters
+- No pagination limits - exports all matching data
+- Proper file download headers for browser compatibility
+
+**Data Formats:**
+- JSON: Standard API responses with pagination and metadata
+- CSV: Complete data exports for spreadsheet applications`,
           contact: {
             name: 'API Support',
             email: 'support@example.com'
@@ -37,6 +57,32 @@ class OpenApiGenerator {
           {
             url: baseUrl,
             description: 'API Server'
+          }
+        ],
+        tags: [
+          {
+            name: 'Collections',
+            description: 'CRUD operations for MongoDB collections with JSON and CSV export support'
+          },
+          {
+            name: 'CSV Export',
+            description: 'Export collection data in CSV format for analysis and reporting'
+          },
+          {
+            name: 'Management',
+            description: 'Collection and system management operations'
+          },
+          {
+            name: 'Webhooks',
+            description: 'Real-time event notifications and webhook management'
+          },
+          {
+            name: 'Scripts',
+            description: 'JavaScript automation engine with event scripts and cron scheduling'
+          },
+          {
+            name: 'SDK',
+            description: 'SDK generation and API documentation endpoints'
           }
         ],
         components: {
@@ -334,6 +380,20 @@ class OpenApiGenerator {
             description: 'Execution time in milliseconds'
           }
         }
+      },
+      CSVExportResponse: {
+        type: 'string',
+        description: 'CSV format export of collection data',
+        example: '_id,name,email,age,department\n507f1f77bcf86cd799439011,John Doe,john@example.com,30,Engineering\n507f1f77bcf86cd799439012,Jane Smith,jane@example.com,25,Sales',
+        'x-content-type': 'text/csv',
+        'x-export-features': [
+          'Automatic field detection and CSV headers',
+          'Nested objects converted to JSON strings',
+          'Arrays joined with semicolons',
+          'No pagination - exports all matching data',
+          'Compatible with filtering and field selection',
+          'Proper Content-Disposition headers for downloads'
+        ]
       },
       Collection: {
         type: 'object',
@@ -1192,21 +1252,32 @@ class OpenApiGenerator {
       // Collection CRUD operations
       paths[`/api/db/${collectionName}`] = {
         get: {
-          tags: [collectionName],
+          tags: [collectionName, 'Collections', 'CSV Export'],
           summary: `List ${collectionName} documents`,
-          description: `Retrieve paginated list of documents from ${collectionName} collection with advanced filtering. Supports both JSON and CSV output formats.`,
+          description: `Retrieve paginated list of documents from ${collectionName} collection with advanced filtering. 
+
+**Output Formats:**
+- **JSON**: Standard paginated response with metadata
+- **CSV**: Complete data export in CSV format (no pagination)
+
+**CSV Export Features:**
+- Automatic field detection and header generation
+- Nested objects converted to JSON strings
+- Arrays joined with semicolons
+- Proper Content-Disposition headers for file downloads
+- Works with all filtering and field selection parameters`,
           parameters: [
             {
               name: 'page',
               in: 'query',
               schema: { type: 'integer', minimum: 1, default: 1 },
-              description: 'Page number for pagination'
+              description: 'Page number for pagination (ignored for CSV format)'
             },
             {
               name: 'limit',
               in: 'query',
               schema: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-              description: 'Number of documents per page'
+              description: 'Number of documents per page (ignored for CSV format)'
             },
             {
               name: 'sort',
@@ -1218,19 +1289,19 @@ class OpenApiGenerator {
               name: 'fields',
               in: 'query',
               schema: { type: 'string' },
-              description: 'Comma-separated fields to include in response'
+              description: 'Comma-separated fields to include in response (works with CSV)'
             },
             {
               name: 'filter',
               in: 'query',
               schema: { type: 'string' },
-              description: 'MongoDB-style filter query (JSON string)'
+              description: 'MongoDB-style filter query (JSON string, works with CSV)'
             },
             {
               name: 'format',
               in: 'query',
-              schema: { type: 'string', enum: ['json', 'csv'] },
-              description: 'Response format (json or csv). CSV format exports all data without pagination.'
+              schema: { type: 'string', enum: ['json', 'csv'], default: 'json' },
+              description: 'Response format. CSV exports all matching data without pagination.'
             }
           ],
           responses: {
@@ -1238,21 +1309,58 @@ class OpenApiGenerator {
               description: 'Successful response',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/PaginatedResponse' }
+                  schema: { $ref: '#/components/schemas/PaginatedResponse' },
+                  examples: {
+                    standard: {
+                      summary: 'Standard paginated response',
+                      value: {
+                        success: true,
+                        data: [
+                          { _id: '507f1f77bcf86cd799439011', name: 'John Doe', email: 'john@example.com' }
+                        ],
+                        pagination: { page: 1, limit: 10, total: 25, pages: 3 }
+                      }
+                    }
+                  }
                 },
                 'text/csv': {
                   schema: {
                     type: 'string',
-                    description: 'CSV format export of collection data'
+                    description: 'CSV format export with automatic headers and data conversion'
                   },
-                  example: 'id,name,email\n1,John Doe,john@example.com\n2,Jane Smith,jane@example.com'
+                  examples: {
+                    basic: {
+                      summary: 'Basic CSV export',
+                      value: '_id,name,email,age\n507f1f77bcf86cd799439011,John Doe,john@example.com,30\n507f1f77bcf86cd799439012,Jane Smith,jane@example.com,25'
+                    },
+                    filtered: {
+                      summary: 'Filtered CSV with selected fields',
+                      value: 'name,email\nJohn Doe,john@example.com\nJane Smith,jane@example.com'
+                    }
+                  }
+                }
+              }
+            },
+            400: {
+              description: 'Bad request - invalid parameters',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ApiResponse' }
+                }
+              }
+            },
+            404: {
+              description: 'Collection not found',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ApiResponse' }
                 }
               }
             }
           }
         },
         post: {
-          tags: [collectionName],
+          tags: [collectionName, 'Collections'],
           summary: `Create ${collectionName} document`,
           description: `Create a new document in the ${collectionName} collection`,
           requestBody: {
@@ -1281,7 +1389,7 @@ class OpenApiGenerator {
       // Individual document operations
       paths[`/api/db/${collectionName}/{id}`] = {
         get: {
-          tags: [collectionName],
+          tags: [collectionName, 'Collections'],
           summary: `Get ${collectionName} document by ID`,
           parameters: [
             {
@@ -1309,7 +1417,7 @@ class OpenApiGenerator {
           }
         },
         put: {
-          tags: [collectionName],
+          tags: [collectionName, 'Collections'],
           summary: `Update ${collectionName} document`,
           parameters: [
             {
@@ -1336,7 +1444,7 @@ class OpenApiGenerator {
           }
         },
         delete: {
-          tags: [collectionName],
+          tags: [collectionName, 'Collections'],
           summary: `Delete ${collectionName} document`,
           parameters: [
             {
