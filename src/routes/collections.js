@@ -1,4 +1,5 @@
 const express = require('express');
+const config = require('../config');
 const dbService = require('../services/database');
 const FilterService = require('../services/filterService');
 const { Parser } = require('json2csv');
@@ -63,6 +64,14 @@ router.get('/:collection', validateCollectionName, async (req, res, next) => {
     const result = await dbService.findDocuments(collection, filter, options);
     
     if (requestsCSV) {
+      // Check CSV export limits
+      if (result.data && result.data.length > config.api.csv.maxExportRecords) {
+        return res.status(413).json({
+          success: false,
+          error: `CSV export limited to ${config.api.csv.maxExportRecords} records. Current result has ${result.data.length} records. Please use filtering to reduce the dataset.`
+        });
+      }
+
       // Convert to CSV format
       if (!result.data || result.data.length === 0) {
         // Return empty CSV with headers if no data
@@ -82,6 +91,9 @@ router.get('/:collection', validateCollectionName, async (req, res, next) => {
 
         const parser = new Parser({
           fields: Array.from(allFields),
+          delimiter: config.api.csv.delimiter,
+          quote: config.api.csv.quoteChar,
+          escape: config.api.csv.escapeChar,
           transforms: [
             // Handle nested objects by converting to JSON strings
             (item) => {

@@ -1,4 +1,5 @@
 const { MongoClient, ObjectId } = require('mongodb');
+const config = require('../config');
 const WebhookDeliveryService = require('./webhookDelivery');
 const ScriptExecutionService = require('./scriptExecution');
 
@@ -8,17 +9,17 @@ class DatabaseService {
     this.db = null;
     this.connected = false;
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
-    this.reconnectDelay = 1000; // Start with 1 second
-    this.maxReconnectDelay = 30000; // Max 30 seconds
+    this.maxReconnectAttempts = config.database.reconnection.maxAttempts;
+    this.reconnectDelay = config.database.reconnection.initialDelay;
+    this.maxReconnectDelay = config.database.reconnection.maxDelay;
     this.connectionMonitorInterval = null;
     this.webhookDelivery = new WebhookDeliveryService();
     this.scriptExecution = new ScriptExecutionService();
   }
 
   async connect() {
-    const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/crud_api';
-    const dbName = uri.split('/').pop().split('?')[0] || 'crud_api';
+    const uri = config.database.uri;
+    const dbName = config.database.name;
 
     try {
       await this.establishConnection(uri, dbName);
@@ -35,10 +36,10 @@ class DatabaseService {
     console.log(`Attempting to connect to MongoDB at ${uri}...`);
     
     const options = {
-      maxPoolSize: 10,
-      minPoolSize: 2,
-      maxIdleTimeMS: 30000,
-      serverSelectionTimeoutMS: 5000,
+      maxPoolSize: config.database.connection.maxPoolSize,
+      minPoolSize: config.database.connection.minPoolSize,
+      maxIdleTimeMS: config.database.connection.maxIdleTimeMS,
+      serverSelectionTimeoutMS: config.database.connection.serverSelectionTimeoutMS,
       socketTimeoutMS: 45000,
       retryWrites: true,
       retryReads: true
@@ -53,7 +54,7 @@ class DatabaseService {
     this.db = this.client.db(dbName);
     this.connected = true;
     this.reconnectAttempts = 0;
-    this.reconnectDelay = 1000; // Reset delay
+    this.reconnectDelay = config.database.reconnection.initialDelay; // Reset delay
     
     console.log(`Successfully connected to MongoDB database: ${dbName}`);
     
@@ -106,12 +107,12 @@ class DatabaseService {
         console.error('Connection monitoring detected failure:', error.message);
         this.connected = false;
         
-        const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/crud_api';
-        const dbName = uri.split('/').pop().split('?')[0] || 'crud_api';
+        const uri = config.database.uri;
+        const dbName = config.database.name;
         
         await this.handleConnectionFailure(uri, dbName);
       }
-    }, 30000); // Check every 30 seconds
+    }, config.database.reconnection.monitorInterval);
   }
 
   async ensureConnection() {
@@ -321,10 +322,20 @@ class DatabaseService {
   async findDocuments(collectionName, filter = {}, options = {}) {
     try {
       const collection = this.db.collection(collectionName);
-      const { page = 1, limit = 10, sort, fields } = options;
+      const { 
+        page = 1, 
+        limit = config.api.pagination.defaultPageSize, 
+        sort, 
+        fields 
+      } = options;
       
       // Check if pagination is disabled (for CSV export)
       const noPagination = page === null || limit === null;
+      
+      // Validate pagination limits
+      if (!noPagination && limit > config.api.pagination.maxPageSize) {
+        throw new Error(`Limit cannot exceed ${config.api.pagination.maxPageSize}`);
+      }
       
       let documents, total;
       

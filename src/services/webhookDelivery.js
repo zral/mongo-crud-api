@@ -1,3 +1,5 @@
+const config = require('../config');
+
 class WebhookDeliveryService {
   constructor() {
     // Rate limiting: Map of webhook URLs to their last delivery times and counts
@@ -6,14 +8,14 @@ class WebhookDeliveryService {
     // Delivery queue for failed webhooks
     this.deliveryQueue = [];
     
-    // Rate limiting configuration
+    // Rate limiting configuration from config
     this.rateLimit = {
-      maxRequestsPerMinute: 60, // Max 60 requests per minute per webhook URL
-      windowMs: 60 * 1000, // 1 minute window
-      backoffMultiplier: 2, // Exponential backoff multiplier
-      maxRetries: 3, // Maximum retry attempts
-      baseDelayMs: 1000, // Base delay between retries (1 second)
-      maxDelayMs: 30000 // Maximum delay between retries (30 seconds)
+      maxRequestsPerMinute: config.webhooks.rateLimit.defaultMaxRequestsPerMinute,
+      windowMs: config.webhooks.rateLimit.windowMs,
+      backoffMultiplier: config.webhooks.rateLimit.backoffMultiplier,
+      maxRetries: config.webhooks.maxRetries,
+      baseDelayMs: config.webhooks.retryDelay,
+      maxDelayMs: config.webhooks.maxRetryDelay
     };
     
     // Start processing retry queue
@@ -113,7 +115,7 @@ class WebhookDeliveryService {
         'X-Max-Retries': webhookRateLimit.maxRetries.toString()
       },
       body: JSON.stringify(payload),
-      timeout: 5000 // 5 second timeout
+      timeout: config.webhooks.timeout
     };
 
     console.log(`Attempting webhook delivery ${deliveryId} (attempt ${attemptNumber}) to ${webhook.url}`);

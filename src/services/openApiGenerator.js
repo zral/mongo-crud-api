@@ -4,58 +4,44 @@
  */
 
 const swaggerJsdoc = require('swagger-jsdoc');
+const config = require('../config');
 
 class OpenApiGenerator {
   constructor(schemaDiscovery) {
     this.schemaDiscovery = schemaDiscovery;
+    this.config = config.openapi;
   }
 
   /**
    * Generate complete OpenAPI specification
    */
-  async generateSpec(baseUrl = 'http://localhost:3001') {
+  async generateSpec(baseUrl = null) {
     const collections = await this.schemaDiscovery.dbService.listCollections();
     const schemas = await this.schemaDiscovery.getAllCollectionSchemas();
+
+    // Use provided baseUrl or fall back to config
+    const serverUrl = baseUrl || (this.config.servers[0] ? this.config.servers[0].url : `http://localhost:${config.server.port}`);
 
     const options = {
       definition: {
         openapi: '3.0.0',
         info: {
-          title: 'MongoDB CRUD REST API',
-          version: '1.0.0',
-          description: `Dynamic MongoDB collection management with comprehensive features:
-
-**Core Features:**
-- Full CRUD operations for all MongoDB collections
-- Advanced filtering with MongoDB-style queries
-- Webhook system for real-time event notifications
-- JavaScript automation engine with event scripts and cron scheduling
-- CSV export functionality for data analysis
-
-**CSV Export Capabilities:**
-- Export collection data in CSV format for analysis and reporting
-- Support via Accept headers (text/csv, application/csv) or ?format=csv parameter
-- Automatic field detection and header generation
-- Smart data conversion (nested objects, arrays, dates)
-- Works with all filtering and field selection parameters
-- No pagination limits - exports all matching data
-- Proper file download headers for browser compatibility
-
-**Data Formats:**
-- JSON: Standard API responses with pagination and metadata
-- CSV: Complete data exports for spreadsheet applications`,
+          title: this.config.title,
+          version: this.config.version,
+          description: this.config.description,
           contact: {
-            name: 'API Support',
-            email: 'support@example.com'
+            name: this.config.contact.name,
+            email: this.config.contact.email,
+            ...(this.config.contact.url && { url: this.config.contact.url })
           },
           license: {
-            name: 'MIT',
-            url: 'https://opensource.org/licenses/MIT'
+            name: this.config.license.name,
+            url: this.config.license.url
           }
         },
-        servers: [
+        servers: this.config.servers.length > 0 ? this.config.servers : [
           {
-            url: baseUrl,
+            url: serverUrl,
             description: 'API Server'
           }
         ],
@@ -90,7 +76,7 @@ class OpenApiGenerator {
             bearerAuth: {
               type: 'http',
               scheme: 'bearer',
-              bearerFormat: 'JWT'
+              bearerFormat: this.config.security.bearerFormat
             }
           },
           schemas: {

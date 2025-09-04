@@ -2,7 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-require('dotenv').config();
+
+// Load configuration first
+const config = require('./config');
 
 const dbService = require('./services/database');
 const SchemaDiscoveryService = require('./services/schemaDiscovery');
@@ -18,17 +20,24 @@ const bulkDataRoutes = require('./routes/bulkData');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(helmet());
-app.use(cors());
-app.use(morgan('combined'));
-app.use(express.json({ limit: '10mb' }));
+// Middleware with configuration
+app.use(helmet({
+  contentSecurityPolicy: config.security.helmet.contentSecurityPolicy,
+  crossOriginEmbedderPolicy: config.security.helmet.crossOriginEmbedderPolicy
+}));
+
+app.use(cors({
+  origin: config.server.cors.origin,
+  credentials: config.server.cors.credentials
+}));
+
+app.use(morgan(config.server.middleware.logFormat));
+app.use(express.json({ limit: config.server.middleware.jsonLimit }));
 app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get(config.health.endpoint, (req, res) => {
   res.json({ 
     status: 'healthy', 
     timestamp: new Date().toISOString(),
@@ -94,12 +103,13 @@ async function startServer() {
     
     console.log('SDK services initialized');
     
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}/health`);
-      console.log(`Management API: http://localhost:${PORT}/api/management/collections`);
-      console.log(`OpenAPI Docs: http://localhost:${PORT}/api/sdk/docs`);
-      console.log(`SDK Generation: http://localhost:${PORT}/api/sdk/typescript`);
+    app.listen(config.server.port, config.server.host, () => {
+      console.log(`Server running on ${config.server.host}:${config.server.port}`);
+      console.log(`Environment: ${config.server.nodeEnv}`);
+      console.log(`Health check: http://localhost:${config.server.port}${config.health.endpoint}`);
+      console.log(`Management API: http://localhost:${config.server.port}/api/management/collections`);
+      console.log(`OpenAPI Docs: http://localhost:${config.server.port}/api/sdk/docs`);
+      console.log(`SDK Generation: http://localhost:${config.server.port}/api/sdk/typescript`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
