@@ -1,4 +1,7 @@
 const express = require('express');
+const config = require('../config');
+const WebhookDeliveryService = require('../services/webhookDelivery');
+
 const router = express.Router();
 const { ObjectId } = require('mongodb');
 const dbService = require('../services/database');
@@ -6,6 +9,7 @@ const dbService = require('../services/database');
 // Get all webhooks
 router.get('/', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const webhooks = await dbService.getAllWebhooks();
     res.json({
       success: true,
@@ -25,6 +29,7 @@ router.get('/', async (req, res) => {
 // Create a new webhook
 router.post('/', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { name, url, collection, events, filters, enabled = true, rateLimit } = req.body;
 
     // Validate required fields

@@ -1,11 +1,11 @@
 const express = require('express');
-const dbService = require('../services/database');
 
 const router = express.Router();
 
 // Get all collections
 router.get('/collections', async (req, res, next) => {
   try {
+    const dbService = req.app.locals.dbService;
     const collections = await dbService.listCollections();
     res.json({
       success: true,
@@ -21,6 +21,7 @@ router.get('/collections', async (req, res, next) => {
 router.post('/collections', async (req, res, next) => {
   try {
     const { name } = req.body;
+    const dbService = req.app.locals.dbService;
     
     if (!name) {
       return res.status(400).json({
@@ -58,6 +59,7 @@ router.post('/collections', async (req, res, next) => {
 router.delete('/collections/:name', async (req, res, next) => {
   try {
     const { name } = req.params;
+    const dbService = req.app.locals.dbService;
     
     const result = await dbService.dropCollection(name);
     res.json({

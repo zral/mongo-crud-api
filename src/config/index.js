@@ -28,8 +28,10 @@ class Config {
 
     // Database Configuration
     this.database = {
-      uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/crud_api',
-      name: process.env.DATABASE_NAME || this.extractDbNameFromUri(process.env.MONGODB_URI) || 'crud_api',
+      connectionString: process.env.MONGODB_CONNECTION_STRING || process.env.MONGODB_URI || 'mongodb://localhost:27017',
+      databaseName: process.env.MONGODB_DATABASE_NAME || process.env.DATABASE_NAME || 'crud_api',
+      uri: process.env.MONGODB_CONNECTION_STRING || process.env.MONGODB_URI || 'mongodb://localhost:27017/crud_api',
+      name: process.env.MONGODB_DATABASE_NAME || process.env.DATABASE_NAME || this.extractDbNameFromUri(process.env.MONGODB_URI) || 'crud_api',
       connection: {
         maxPoolSize: parseInt(process.env.DB_MAX_POOL_SIZE) || 10,
         minPoolSize: parseInt(process.env.DB_MIN_POOL_SIZE) || 2,
@@ -142,6 +144,31 @@ class Config {
       verbose: process.env.DEV_VERBOSE === 'true' || false,
       mockData: process.env.DEV_MOCK_DATA === 'true' || false
     };
+
+    // Redis Configuration
+    this.redis = {
+      url: process.env.REDIS_URL || 'redis://localhost:6379',
+      maxRetriesPerRequest: parseInt(process.env.REDIS_MAX_RETRIES) || 3,
+      retryDelayOnFailover: parseInt(process.env.REDIS_RETRY_DELAY) || 100,
+      lazyConnect: process.env.REDIS_LAZY_CONNECT !== 'false',
+      enableReadyCheck: process.env.REDIS_READY_CHECK !== 'false'
+    };
+
+    // Cluster Configuration
+    this.cluster = {
+      instanceId: process.env.INSTANCE_ID || process.env.HOSTNAME || require('os').hostname(),
+      cronLeaderElection: process.env.CRON_LEADER_ELECTION !== 'false',
+      webhookProcessingConcurrency: parseInt(process.env.WEBHOOK_CONCURRENCY) || 5,
+      enableDistributedLocking: process.env.ENABLE_DISTRIBUTED_LOCKING !== 'false'
+    };
+
+    // Scaling Configuration
+    this.scaling = {
+      maxScriptExecutionTime: parseInt(process.env.MAX_SCRIPT_EXECUTION_TIME) || 300000,
+      lockTtl: parseInt(process.env.LOCK_TTL) || 60000,
+      leadershipRenewalInterval: parseInt(process.env.LEADERSHIP_RENEWAL_INTERVAL) || 30000,
+      lockCleanupInterval: parseInt(process.env.LOCK_CLEANUP_INTERVAL) || 300000 // 5 minutes
+    };
   }
 
   /**
@@ -221,6 +248,10 @@ class Config {
       errors.push('MONGODB_URI is required');
     }
 
+    if (this.cluster.enableDistributedLocking && !this.redis.url) {
+      errors.push('REDIS_URL is required when distributed locking is enabled');
+    }
+
     if (this.security.authentication.enabled && !this.security.authentication.jwtSecret) {
       errors.push('JWT_SECRET is required when authentication is enabled');
     }
@@ -275,7 +306,13 @@ class Config {
         authentication: this.security.authentication.enabled,
         rateLimit: this.api.rateLimit.maxRequests > 0,
         webhooks: this.webhooks.timeout > 0,
-        scripts: this.scripts.execution.timeout > 0
+        scripts: this.scripts.execution.timeout > 0,
+        distributedLocking: this.cluster.enableDistributedLocking,
+        clustering: this.cluster.cronLeaderElection
+      },
+      cluster: {
+        instanceId: this.cluster.instanceId,
+        enableDistributedLocking: this.cluster.enableDistributedLocking
       }
     };
   }

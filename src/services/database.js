@@ -863,4 +863,4 @@ class DatabaseService {
   }
 }
 
-module.exports = new DatabaseService();
+module.exports = DatabaseService;

@@ -1,6 +1,5 @@
 const express = require('express');
 const config = require('../config');
-const dbService = require('../services/database');
 const FilterService = require('../services/filterService');
 const { Parser } = require('json2csv');
 
@@ -33,6 +32,7 @@ router.get('/:collection', validateCollectionName, async (req, res, next) => {
   try {
     const { collection } = req.params;
     const { page, limit, sort, fields, format, ...queryParams } = req.query;
+    const dbService = req.app.locals.dbService;
 
     // Check if collection exists
     const exists = await dbService.collectionExists(collection);

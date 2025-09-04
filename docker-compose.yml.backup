@@ -1,0 +1,210 @@
+services:
+  # Redis for distributed coordination
+  redis:
+    image: redis:7-alpine
+    container_name: mongo-crud-redis
+    restart: unless  # React Frontend Application
+  frontend:
+    build: ./frontend
+    container_name: mongo-crud-frontend
+    restart: unless-stopped
+    environment:
+      REACT_APP_API_URL: http://localhost:8080
+    ports:
+      - "3004:3000"
+    depends_on:
+      api1:
+        condition: service_healthy
+    networks:
+      - crud_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - crud_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # MongoDB Database
+  mongo:
+    image: mongo:7
+    container_name: mongo-crud-db
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: crud_api
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./scripts/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - crud_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Node.js API Application - Instance 1 (Leader)
+  api1:
+    build: .
+    container_name: mongo-crud-api1
+    restart: unless-stopped
+    environment:
+      MONGODB_CONNECTION_STRING: mongodb://mongo:27017
+      MONGODB_DATABASE_NAME: crud_api
+      REDIS_URL: redis://redis:6379
+      PORT: 3000
+      NODE_ENV: production
+      CLUSTER_INSTANCE_ID: api-instance-1
+      CLUSTER_ENABLE_DISTRIBUTED_LOCKING: "true"
+      CLUSTER_CRON_LEADER_ELECTION: "true"
+      CLUSTER_REQUIRE_REDIS: "true"
+      WEBHOOKS_ENHANCED_DELIVERY: "true"
+      SCRIPTS_ENABLE_ENHANCED_EXECUTION: "true"
+    ports:
+      - "3001:3000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - crud_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Node.js API Application - Instance 2 (Follower)
+  api2:
+    build: .
+    container_name: mongo-crud-api2
+    restart: unless-stopped
+    environment:
+      MONGODB_CONNECTION_STRING: mongodb://mongo:27017
+      MONGODB_DATABASE_NAME: crud_api
+      REDIS_URL: redis://redis:6379
+      PORT: 3000
+      NODE_ENV: production
+      CLUSTER_INSTANCE_ID: api-instance-2
+      CLUSTER_ENABLE_DISTRIBUTED_LOCKING: "true"
+      CLUSTER_CRON_LEADER_ELECTION: "true"
+      CLUSTER_REQUIRE_REDIS: "true"
+      WEBHOOKS_ENHANCED_DELIVERY: "true"
+      SCRIPTS_ENABLE_ENHANCED_EXECUTION: "true"
+    ports:
+      - "3002:3000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - crud_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Node.js API Application - Instance 3 (Follower)
+  api3:
+    build: .
+    container_name: mongo-crud-api3
+    restart: unless-stopped
+    environment:
+      MONGODB_CONNECTION_STRING: mongodb://mongo:27017
+      MONGODB_DATABASE_NAME: crud_api
+      REDIS_URL: redis://redis:6379
+      PORT: 3000
+      NODE_ENV: production
+      CLUSTER_INSTANCE_ID: api-instance-3
+      CLUSTER_ENABLE_DISTRIBUTED_LOCKING: "true"
+      CLUSTER_CRON_LEADER_ELECTION: "true"
+      CLUSTER_REQUIRE_REDIS: "true"
+      WEBHOOKS_ENHANCED_DELIVERY: "true"
+      SCRIPTS_ENABLE_ENHANCED_EXECUTION: "true"
+    ports:
+      - "3003:3000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - crud_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # React Frontend Application
+  frontend:
+    build: ./frontend
+    container_name: mongo-crud-frontend
+    restart: unless-stopped
+    environment:
+      REACT_APP_API_URL: http://localhost:3001
+    ports:
+      - "3004:3000"
+    depends_on:
+      api1:
+        condition: service_healthy
+    networks:
+      - crud_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Load Balancer (Nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: mongo-crud-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api1
+      - api2
+      - api3
+    networks:
+      - crud_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  mongo_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  crud_network:
+    driver: bridge

@@ -6,7 +6,7 @@ const morgan = require('morgan');
 // Load configuration first
 const config = require('./config');
 
-const dbService = require('./services/database');
+const DatabaseService = require('./services/database');
 const SchemaDiscoveryService = require('./services/schemaDiscovery');
 const OpenApiGenerator = require('./services/openApiGenerator');
 const SDKGeneratorService = require('./services/sdkGenerator');
@@ -17,6 +17,7 @@ const webhookRoutes = require('./routes/webhooks');
 const scriptRoutes = require('./routes/scripts');
 const sdkRoutes = require('./routes/sdk');
 const bulkDataRoutes = require('./routes/bulkData');
+const clusterRoutes = require('./routes/cluster');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -38,10 +39,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
 app.get(config.health.endpoint, (req, res) => {
+  const dbService = req.app.locals.dbService;
   res.json({ 
     status: 'healthy', 
     timestamp: new Date().toISOString(),
-    mongodb: dbService.isConnected() ? 'connected' : 'disconnected'
+    mongodb: dbService?.isConnected() ? 'connected' : 'disconnected'
   });
 });
 
@@ -52,6 +54,7 @@ app.use('/api/scripts', scriptRoutes);
 app.use('/api/sdk', sdkRoutes);
 app.use('/api/bulk', bulkDataRoutes);
 app.use('/api/db', collectionRoutes);
+app.use('/api/cluster', clusterRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -88,8 +91,13 @@ app.use(errorHandler);
 // Start server
 async function startServer() {
   try {
+    // Initialize database service
+    const dbService = new DatabaseService();
     await dbService.connect();
     console.log('Connected to MongoDB');
+    
+    // Store dbService in app.locals for access in routes
+    app.locals.dbService = dbService;
     
     // Initialize SDK services
     const schemaDiscovery = new SchemaDiscoveryService(dbService);
@@ -103,11 +111,73 @@ async function startServer() {
     
     console.log('SDK services initialized');
     
+    // Initialize scalability services
+    let distributedLock = null;
+    let enhancedWebhookDeliveryService = null;
+    let enhancedScriptExecutionService = null;
+
+    if (config.cluster.enableDistributedLocking) {
+      const DistributedLock = require('./services/distributedLock');
+      distributedLock = new DistributedLock(config.redis.url, {
+        prefix: config.cluster.instanceId,
+        ttl: config.cluster.lockTtl
+      });
+      
+      try {
+        await distributedLock.healthCheck();
+        app.locals.distributedLock = distributedLock;
+        console.log('Distributed locking service initialized');
+      } catch (error) {
+        console.warn('Distributed locking service failed to initialize:', error.message);
+        if (config.cluster.requireRedis) {
+          throw new Error('Redis is required for cluster mode but unavailable');
+        }
+      }
+    }
+
+    // Initialize enhanced webhook delivery service
+    if (config.webhooks.enhancedDelivery) {
+      const EnhancedWebhookDelivery = require('./services/enhancedWebhookDelivery');
+      enhancedWebhookDeliveryService = new EnhancedWebhookDelivery(config, distributedLock);
+      app.locals.enhancedWebhookDeliveryService = enhancedWebhookDeliveryService;
+      
+      try {
+        await enhancedWebhookDeliveryService.initialize();
+        console.log('Enhanced webhook delivery service initialized');
+      } catch (error) {
+        console.warn('Enhanced webhook delivery failed to initialize:', error.message);
+      }
+    }
+
+    // Initialize enhanced script execution service
+    if (config.scripts.enableEnhancedExecution) {
+      const EnhancedScriptExecution = require('./services/enhancedScriptExecution');
+      enhancedScriptExecutionService = new EnhancedScriptExecution(config, distributedLock);
+      app.locals.enhancedScriptExecutionService = enhancedScriptExecutionService;
+      
+      try {
+        await enhancedScriptExecutionService.initialize();
+        console.log('Enhanced script execution service initialized');
+        
+        if (config.cluster.cronLeaderElection) {
+          console.log(`Instance ${config.cluster.instanceId} ready for cron leadership election`);
+        }
+      } catch (error) {
+        console.warn('Enhanced script execution failed to initialize:', error.message);
+      }
+    }
+    
+    // Store start time for monitoring
+    process.env.START_TIME = new Date().toISOString();
+    
     app.listen(config.server.port, config.server.host, () => {
       console.log(`Server running on ${config.server.host}:${config.server.port}`);
       console.log(`Environment: ${config.server.nodeEnv}`);
+      console.log(`Instance ID: ${config.cluster.instanceId}`);
+      console.log(`Cluster Mode: ${config.cluster.enableDistributedLocking ? 'Enabled' : 'Disabled'}`);
       console.log(`Health check: http://localhost:${config.server.port}${config.health.endpoint}`);
       console.log(`Management API: http://localhost:${config.server.port}/api/management/collections`);
+      console.log(`Cluster API: http://localhost:${config.server.port}/api/cluster/status`);
       console.log(`OpenAPI Docs: http://localhost:${config.server.port}/api/sdk/docs`);
       console.log(`SDK Generation: http://localhost:${config.server.port}/api/sdk/typescript`);
     });
@@ -120,13 +190,79 @@ async function startServer() {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('Shutting down gracefully...');
-  await dbService.disconnect();
+  
+  // Shut down scalability services
+  if (app.locals.enhancedScriptExecutionService) {
+    try {
+      await app.locals.enhancedScriptExecutionService.shutdown();
+      console.log('Enhanced script execution service shut down');
+    } catch (error) {
+      console.error('Error shutting down script service:', error);
+    }
+  }
+  
+  if (app.locals.enhancedWebhookDeliveryService) {
+    try {
+      await app.locals.enhancedWebhookDeliveryService.shutdown();
+      console.log('Enhanced webhook delivery service shut down');
+    } catch (error) {
+      console.error('Error shutting down webhook service:', error);
+    }
+  }
+  
+  if (app.locals.distributedLock) {
+    try {
+      await app.locals.distributedLock.shutdown();
+      console.log('Distributed lock service shut down');
+    } catch (error) {
+      console.error('Error shutting down distributed lock service:', error);
+    }
+  }
+  
+  const dbService = app.locals.dbService;
+  if (dbService) {
+    await dbService.disconnect();
+  }
+  console.log('Graceful shutdown complete');
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('Shutting down gracefully...');
-  await dbService.disconnect();
+  
+  // Shut down scalability services  
+  if (app.locals.enhancedScriptExecutionService) {
+    try {
+      await app.locals.enhancedScriptExecutionService.shutdown();
+      console.log('Enhanced script execution service shut down');
+    } catch (error) {
+      console.error('Error shutting down script service:', error);
+    }
+  }
+  
+  if (app.locals.enhancedWebhookDeliveryService) {
+    try {
+      await app.locals.enhancedWebhookDeliveryService.shutdown();
+      console.log('Enhanced webhook delivery service shut down');
+    } catch (error) {
+      console.error('Error shutting down webhook service:', error);
+    }
+  }
+  
+  if (app.locals.distributedLock) {
+    try {
+      await app.locals.distributedLock.shutdown();
+      console.log('Distributed lock service shut down');
+    } catch (error) {
+      console.error('Error shutting down distributed lock service:', error);
+    }
+  }
+  
+  const dbService = app.locals.dbService;
+  if (dbService) {
+    await dbService.disconnect();
+  }
+  console.log('Graceful shutdown complete');
   process.exit(0);
 });
 

@@ -1,4 +1,7 @@
 const express = require('express');
+const config = require('../config');
+const ScriptExecutionService = require('../services/scriptExecution');
+
 const router = express.Router();
 const { ObjectId } = require('mongodb');
 const dbService = require('../services/database');
@@ -6,6 +9,7 @@ const dbService = require('../services/database');
 // Get all scripts
 router.get('/', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const scripts = await dbService.getAllScripts();
     res.json({
       success: true,
@@ -699,6 +703,7 @@ router.delete('/:id/schedule', async (req, res) => {
 // Get all scheduled scripts
 router.get('/scheduled/list', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const scheduledScripts = dbService.scriptExecution.getScheduledScripts();
     const cronStats = dbService.scriptExecution.getCronStatistics();
 
