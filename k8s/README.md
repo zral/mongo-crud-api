@@ -1,6 +1,41 @@
 # Kubernetes Deployment Guide
 
+✅ **Successfully Deployed and Tested** - This deployment has been verified on local Kubernetes cluster.
+
 This guide covers deploying the MongoDB CRUD API with full scalability features in a Kubernetes cluster.
+
+## 🎯 Quick Deployment (Tested Configuration)
+
+```bash
+# 1. Build local Docker images
+docker build -t mongodb-crud-api:latest .
+docker build -t mongodb-crud-frontend:latest ./frontend
+
+# 2. Deploy to Kubernetes
+kubectl apply -f k8s/deployment.yaml
+
+# 3. Verify deployment
+kubectl get pods -n mongodb-crud
+
+# 4. Access the application
+kubectl port-forward -n mongodb-crud svc/crud-api-service 8080:80 &
+kubectl port-forward -n mongodb-crud svc/frontend-service 3000:3000 &
+
+# 5. Test the deployment
+curl http://localhost:8080/health
+curl http://localhost:8080/api/cluster/status
+```
+
+## ✅ Verified Deployment Status
+
+**All components successfully deployed and tested:**
+- **API Pods**: 3/3 running with distributed coordination
+- **Frontend**: 1/1 running with React interface  
+- **MongoDB**: 1/1 running with authentication (admin/password)
+- **Redis**: 1/1 running for distributed locking
+- **Services**: All ClusterIP and LoadBalancer services operational
+- **HPA**: Auto-scaling configured (2-10 replicas based on CPU/memory)
+- **Health Checks**: All readiness and liveness probes working
 
 ## Architecture Overview
 
@@ -40,38 +75,40 @@ The deployment includes:
 
 ## Deployment Steps
 
-### 1. Build and Push Docker Image
+### ✅ Verified Local Deployment
+
+For local Kubernetes clusters (Docker Desktop, minikube, etc.):
 
 ```bash
-# Build the image
-docker build -t crud-api:latest .
+# 1. Build local images (no registry required)
+docker build -t mongodb-crud-api:latest .
+docker build -t mongodb-crud-frontend:latest ./frontend
 
-# Tag for your registry
-docker tag crud-api:latest your-registry/crud-api:latest
-
-# Push to registry
-docker push your-registry/crud-api:latest
-```
-
-### 2. Update Image Reference
-
-Edit `k8s/deployment.yaml` and update the image reference:
-
-```yaml
-containers:
-- name: crud-api
-  image: your-registry/crud-api:latest  # Update this line
-```
-
-### 3. Deploy to Kubernetes
-
-```bash
-# Apply the deployment
+# 2. Deploy all resources
 kubectl apply -f k8s/deployment.yaml
 
-# Check the deployment status
+# 3. Wait for pods to be ready
+kubectl wait --for=condition=ready pod -l app=mongodb -n mongodb-crud --timeout=60s
+kubectl wait --for=condition=ready pod -l app=crud-api -n mongodb-crud --timeout=120s
+
+# 4. Verify all pods are running
 kubectl get pods -n mongodb-crud
-kubectl get services -n mongodb-crud
+```
+
+### For Remote/Production Clusters
+
+```bash
+# 1. Build and push to registry
+docker build -t your-registry/mongodb-crud-api:latest .
+docker build -t your-registry/mongodb-crud-frontend:latest ./frontend
+docker push your-registry/mongodb-crud-api:latest  
+docker push your-registry/mongodb-crud-frontend:latest
+
+# 2. Update image references in k8s/deployment.yaml
+# Edit the image names to use your registry
+
+# 3. Deploy to cluster
+kubectl apply -f k8s/deployment.yaml
 ```
 
 ### 4. Wait for Services to be Ready
@@ -121,19 +158,43 @@ targetCPU: 70%      # Scale up at 70% CPU
 targetMemory: 80%   # Scale up at 80% memory
 ```
 
-## Monitoring
+## ✅ Testing & Verification
 
-### Health Checks
+### Health Checks (Verified Working)
 
 ```bash
-# Basic health
-curl http://crud-api.local/health
+# Basic health check
+curl http://localhost:8080/health
+# Expected: {"status":"healthy","timestamp":"...","mongodb":"connected"}
 
-# Cluster health
-curl http://crud-api.local/api/cluster/health
+# Cluster status with multi-instance coordination
+curl http://localhost:8080/api/cluster/status | jq
+# Expected: Instance details, distributed locking status, database connections
 
-# Detailed status
-curl http://crud-api.local/api/cluster/status
+# Management API
+curl http://localhost:8080/api/management/collections | jq
+# Expected: List of available collections
+```
+
+### Troubleshooting - Common Issues Resolved
+
+**MongoDB Connection Issues:**
+- ✅ Fixed: Updated MongoDB health checks from `mongo` to `mongosh` for v7 compatibility
+- ✅ Fixed: Added authentication credentials to connection string
+- Solution: MongoDB uses admin/password authentication
+
+**Pod Startup Issues:**
+- ✅ Fixed: Used `imagePullPolicy: Never` for local images
+- ✅ Fixed: Added proper startup ordering with readiness probes
+- Solution: MongoDB must be ready before API pods can connect
+
+**Port Forwarding Access:**
+```bash
+# API access
+kubectl port-forward -n mongodb-crud svc/crud-api-service 8080:80
+
+# Frontend access  
+kubectl port-forward -n mongodb-crud svc/frontend-service 3000:3000
 ```
 
 ### Leadership Monitoring

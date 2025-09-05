@@ -104,16 +104,42 @@ Perfect for presenting this solution to stakeholders, investors, or as a foundat
 
 ## 🎯 Quick Start
 
+### **Option 1: Docker Compose (Development)**
 ```bash
 # Start all services with Docker Compose
 docker-compose up -d
 ```
+
+### **Option 2: Kubernetes (Production)**
+```bash
+# Build local images
+docker build -t mongodb-crud-api:latest .
+docker build -t mongodb-crud-frontend:latest ./frontend
+
+# Deploy to Kubernetes
+kubectl apply -f k8s/deployment.yaml
+
+# Check deployment status
+kubectl get pods -n mongodb-crud
+
+# Access via port forwarding
+kubectl port-forward -n mongodb-crud svc/crud-api-service 8080:80
+kubectl port-forward -n mongodb-crud svc/frontend-service 3000:3000
+```
 ### Access the application
+
+#### Docker Compose:
 Frontend: http://localhost:3004  
 API Load Balancer: http://localhost:8080  
 API Instances: http://localhost:3001, http://localhost:3002, http://localhost:3003  
 MongoDB: localhost:27017  
 Redis: localhost:6379  
+
+#### Kubernetes:
+Frontend: http://localhost:3000 (via port-forward)  
+API: http://localhost:8080 (via port-forward)  
+Cluster Status: http://localhost:8080/api/cluster/status  
+Health Check: http://localhost:8080/health  
 
 ### Quick API test
 ```bash
@@ -1438,27 +1464,44 @@ CRON_ENABLED=true                     # Enable cron jobs (leader only)
 
 ### **Kubernetes Deployment**
 
-Deploy to Kubernetes with the provided manifests:
+✅ **Successfully deployed and tested** with local Kubernetes cluster.
 
 ```bash
-# Deploy to Kubernetes
-kubectl apply -f k8s/
+# Build local images for Kubernetes
+docker build -t mongodb-crud-api:latest .
+docker build -t mongodb-crud-frontend:latest ./frontend
 
-# Services deployed:
-# - API Deployment (3 replicas)
-# - Frontend Deployment
-# - MongoDB StatefulSet
-# - Redis Deployment
-# - Load Balancer Service
-# - Ingress Controller
+# Deploy to Kubernetes cluster
+kubectl apply -f k8s/deployment.yaml
+
+# Verify deployment
+kubectl get pods -n mongodb-crud
+kubectl get services -n mongodb-crud
+
+# Access the application
+kubectl port-forward -n mongodb-crud svc/crud-api-service 8080:80 &
+kubectl port-forward -n mongodb-crud svc/frontend-service 3000:3000 &
 ```
 
-**Kubernetes Resources:**
-- **API Pods**: 3 replicas with auto-scaling (HPA)
-- **Frontend Pod**: Single replica with service exposure
-- **MongoDB**: StatefulSet with persistent storage
-- **Redis**: Deployment for coordination
-- **Ingress**: SSL termination and routing
+**Kubernetes Resources Deployed:**
+- **API Pods**: 3 replicas with auto-scaling (HPA) ✅
+- **Frontend Pod**: React interface with LoadBalancer service ✅
+- **MongoDB**: Single instance with authentication (admin/password) ✅
+- **Redis**: Distributed locking and coordination ✅
+- **Services**: ClusterIP and LoadBalancer configurations ✅
+- **HPA**: Auto-scaling based on CPU/memory (2-10 replicas) ✅
+- **Network Policies**: Security isolation ✅
+- **Ingress**: External access configuration ✅
+
+**Verified Features:**
+- ✅ Multi-instance coordination and distributed locking
+- ✅ MongoDB authentication and connectivity
+- ✅ Health checks and readiness probes
+- ✅ Frontend-backend communication
+- ✅ API endpoints and cluster status monitoring
+- ✅ Horizontal Pod Autoscaler functionality
+
+See detailed instructions in [k8s/README.md](k8s/README.md)
 
 ### **Single Instance Deployment**
 

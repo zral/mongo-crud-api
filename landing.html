@@ -398,7 +398,7 @@ GET    /api/sdk/docs              # Swagger UI</pre>
             <h2 class="section-title">🚀 Getting Started</h2>
             <div style="max-width: 800px; margin: 0 auto;">
                 <div style="background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
-                    <h3 style="margin-bottom: 20px;">Multi-Instance Production Deployment</h3>
+                    <h3 style="margin-bottom: 20px;">🐳 Docker Compose Deployment</h3>
                     <pre style="background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 8px; font-size: 14px; overflow-x: auto;">
 # Clone the repository
 git clone https://github.com/your-repo/mongodb-crud-api.git
@@ -418,6 +418,26 @@ docker-compose up -d
 Load Balancer: http://localhost:8080
 Frontend:      http://localhost:3004
 API Direct:    http://localhost:3001, 3002, 3003</pre>
+
+                    <h3 style="margin: 30px 0 20px 0;">☸️ Kubernetes Deployment (Production Ready)</h3>
+                    <pre style="background: #1a365d; color: #e2e8f0; padding: 20px; border-radius: 8px; font-size: 14px; overflow-x: auto;">
+# Build images for Kubernetes
+docker build -t mongodb-crud-api:latest .
+docker build -t mongodb-crud-frontend:latest ./frontend
+
+# Deploy to Kubernetes cluster
+kubectl apply -f k8s/deployment.yaml
+
+# Verify deployment
+kubectl get pods -n mongodb-crud
+
+# Access via port forwarding
+kubectl port-forward -n mongodb-crud svc/crud-api-service 8080:80 &
+kubectl port-forward -n mongodb-crud svc/frontend-service 3000:3000 &
+
+# Features: Auto-scaling, Health checks, Multi-pod coordination
+# Resources: 3 API replicas, MongoDB, Redis, Frontend, HPA
+</pre>
                     
                     <h3 style="margin: 30px 0 20px 0;">Health Verification Commands</h3>
                     <pre style="background: #f8f9fa; padding: 20px; border-radius: 8px; font-size: 14px; overflow-x: auto;">
