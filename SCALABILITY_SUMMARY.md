@@ -38,6 +38,213 @@ This document summarizes the complete implementation of scalability features for
    - Lock monitoring and cleanup
    - Health checks and metrics
 
+### Infrastructure Overview
+
+#### Multi-Instance Production Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           EXTERNAL TRAFFIC                                     │
+│                        ┌─────────────────┐                                    │
+│                        │   Users/Apps    │                                    │
+│                        │  External APIs  │                                    │
+│                        └─────────┬───────┘                                    │
+│                                  │ HTTP/HTTPS                                 │
+│                                  │ Port 80/443                                │
+│                                  ▼                                            │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                   │
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              KUBERNETES CLUSTER                                │
+│                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                        LOAD BALANCER                                    │   │
+│  │                    ┌─────────────────┐                                  │   │
+│  │                    │  Nginx Ingress  │                                  │   │
+│  │                    │   Port 80/443   │                                  │   │
+│  │                    │  LoadBalancer   │                                  │   │
+│  │                    └─────────┬───────┘                                  │   │
+│  │                              │ Round Robin                              │   │
+│  │                              │ Health Checks                            │   │
+│  └──────────────────────────────┼─────────────────────────────────────────┘   │
+│                                 │                                             │
+│         ┌───────────────────────┼───────────────────────┐                     │
+│         │                       │                       │                     │
+│         ▼                       ▼                       ▼                     │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐           │
+│  │   API POD 1     │    │   API POD 2     │    │   API POD 3     │           │
+│  │   (LEADER)      │    │   (FOLLOWER)    │    │   (FOLLOWER)    │           │
+│  │                 │    │                 │    │                 │           │
+│  │ ┌─────────────┐ │    │ ┌─────────────┐ │    │ ┌─────────────┐ │           │
+│  │ │   Node.js   │ │    │ │   Node.js   │ │    │ │   Node.js   │ │           │
+│  │ │  Express.js │ │    │ │  Express.js │ │    │ │  Express.js │ │           │
+│  │ │   Port 3000 │ │    │ │   Port 3000 │ │    │ │   Port 3000 │ │           │
+│  │ └─────────────┘ │    │ └─────────────┘ │    │ └─────────────┘ │           │
+│  │                 │    │                 │    │                 │           │
+│  │ Features:       │    │ Features:       │    │ Features:       │           │
+│  │ • REST API      │    │ • REST API      │    │ • REST API      │           │
+│  │ • Webhooks      │    │ • Webhooks      │    │ • Webhooks      │           │
+│  │ • Scripts       │    │ • Scripts       │    │ • Scripts       │           │
+│  │ • CRON Jobs ✓   │    │ • Event Scripts │    │ • Event Scripts │           │
+│  │ • Leader Elect  │    │ • Coordination  │    │ • Coordination  │           │
+│  └─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘           │
+│            │                      │                      │                   │
+│            └──────────────────────┼──────────────────────┘                   │
+│                                   │                                          │
+│  ┌─────────────────────────────────┼─────────────────────────────────────┐   │
+│  │                    COORDINATION LAYER                                 │   │
+│  │                                 │                                     │   │
+│  │                    ┌─────────────────┐                               │   │
+│  │                    │  Redis Cluster  │                               │   │
+│  │                    │   Port 6379     │                               │   │
+│  │                    │                 │                               │   │
+│  │                    │ Services:       │                               │   │
+│  │                    │ • Distributed   │                               │   │
+│  │                    │   Locking       │                               │   │
+│  │                    │ • Leader        │                               │   │
+│  │                    │   Election      │                               │   │
+│  │                    │ • Rate Limiting │                               │   │
+│  │                    │ • Bull Queues   │                               │   │
+│  │                    │ • Session Store │                               │   │
+│  │                    └─────────┬───────┘                               │   │
+│  └──────────────────────────────┼─────────────────────────────────────┘   │
+│                                 │                                          │
+│  ┌─────────────────────────────────┼─────────────────────────────────────┐   │
+│  │                     DATA LAYER │                                     │   │
+│  │                                 │                                     │   │
+│  │                    ┌─────────────────┐                               │   │
+│  │                    │ MongoDB Cluster │                               │   │
+│  │                    │   Port 27017    │                               │   │
+│  │                    │                 │                               │   │
+│  │                    │ Collections:    │                               │   │
+│  │                    │ • Application   │                               │   │
+│  │                    │   Data          │                               │   │
+│  │                    │ • Webhooks      │                               │   │
+│  │                    │ • Scripts       │                               │   │
+│  │                    │ • Audit Logs    │                               │   │
+│  │                    │ • Cluster State │                               │   │
+│  │                    └─────────────────┘                               │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        FRONTEND LAYER                               │   │
+│  │                                                                     │   │
+│  │                    ┌─────────────────┐                             │   │
+│  │                    │  React Frontend │                             │   │
+│  │                    │   Port 3000     │                             │   │
+│  │                    │                 │                             │   │
+│  │                    │ Features:       │                             │   │
+│  │                    │ • Management UI │                             │   │
+│  │                    │ • Data Browser  │                             │   │
+│  │                    │ • Script Editor │                             │   │
+│  │                    │ • Monitoring    │                             │   │
+│  │                    └─────────────────┘                             │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Port Mappings & Service Communication
+
+**External Access**:
+```
+External Port 80   → Ingress → Service Port 80   → Pod Port 3000
+External Port 443  → Ingress → Service Port 443  → Pod Port 3000 (TLS)
+```
+
+**Internal Service Discovery**:
+```
+crud-api-service.mongodb-crud.svc.cluster.local:80     → API Pods
+mongodb-service.mongodb-crud.svc.cluster.local:27017   → MongoDB
+redis-service.mongodb-crud.svc.cluster.local:6379      → Redis
+frontend-service.mongodb-crud.svc.cluster.local:3000   → React App
+```
+
+**Pod-to-Pod Communication**:
+```
+API Pods ←→ Redis:6379        (Locking, Queues, Rate Limiting)
+API Pods ←→ MongoDB:27017     (Data Storage, State Management)
+API Pods ←→ API Pods:3000     (Health Checks, Cluster Status)
+Frontend ←→ API Service:80    (REST API Calls)
+```
+
+#### Docker Compose Development Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        DEVELOPMENT ENVIRONMENT                     │
+│                                                                     │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌───────────────┐   │
+│  │   Frontend      │    │ Nginx LB        │    │  External     │   │
+│  │   Port 3004     │    │ Port 8080       │    │  Access       │   │
+│  │   React Dev     │    │ Load Balancer   │    │  Port 8080    │   │
+│  └─────────────────┘    └─────────┬───────┘    └───────────────┘   │
+│                                   │                                │
+│        ┌──────────────────────────┼──────────────────────────┐     │
+│        │                          │                          │     │
+│        ▼                          ▼                          ▼     │
+│  ┌─────────────┐       ┌─────────────┐       ┌─────────────┐       │
+│  │   API-1     │       │   API-2     │       │   API-3     │       │
+│  │ Port 3001   │       │ Port 3002   │       │ Port 3003   │       │
+│  │ (Leader +   │       │ (Follower)  │       │ (Follower)  │       │
+│  │  Cron Jobs) │       │             │       │             │       │
+│  └─────┬───────┘       └─────┬───────┘       └─────┬───────┘       │
+│        │                     │                     │               │
+│        └─────────────────────┼─────────────────────┘               │
+│                              │                                     │
+│            ┌─────────────────┼─────────────────┐                   │
+│            │                 │                 │                   │
+│            ▼                 ▼                 ▼                   │
+│      ┌─────────────┐   ┌─────────────┐   ┌─────────────┐           │
+│      │   Redis     │   │  MongoDB    │   │  Volumes    │           │
+│      │ Port 6379   │   │ Port 27017  │   │  ./data     │           │
+│      │ Coordination│   │ Database    │   │  ./logs     │           │
+│      └─────────────┘   └─────────────┘   └─────────────┘           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Connection Flow Diagram
+
+```
+┌─────────────┐   HTTP/HTTPS    ┌─────────────┐   Round Robin   ┌─────────────┐
+│   Client    │────────────────▶│ Load        │────────────────▶│   API       │
+│ Application │                 │ Balancer    │                 │ Instances   │
+└─────────────┘                 └─────────────┘                 └──────┬──────┘
+                                                                        │
+                                ┌─────────────┐   Distributed   ┌──────▼──────┐
+                                │   Redis     │◀────────────────│    Redis    │
+                                │  Cluster    │   Locking/      │ Coordination│
+                                └─────────────┘   Queues        └─────────────┘
+                                                                        │
+                                ┌─────────────┐   Database      ┌──────▼──────┐
+                                │  MongoDB    │◀────────────────│   MongoDB   │
+                                │  Cluster    │   Operations    │ Connections │
+                                └─────────────┘                 └─────────────┘
+```
+
+#### Service Dependencies & Health Checks
+
+**Startup Order**:
+1. **MongoDB** (Port 27017) - Database must be available first
+2. **Redis** (Port 6379) - Coordination layer starts after DB
+3. **API Instances** (Port 3000) - Start after dependencies are healthy
+4. **Load Balancer** (Port 80) - Routes traffic to healthy API instances
+5. **Frontend** (Port 3000) - Connects to Load Balancer
+
+**Health Check Endpoints**:
+```
+GET /health                    → Basic health status
+GET /health/ready             → Readiness probe (K8s)
+GET /health/live              → Liveness probe (K8s)
+GET /api/cluster/status       → Cluster health & coordination
+GET /api/cluster/instances    → Instance-specific health
+```
+
+**Scaling Behavior**:
+- **Horizontal Pod Autoscaler**: 2-10 API instances based on CPU/Memory
+- **Leader Election**: Automatic failover when leader pod terminates
+- **Distributed Locks**: Prevent duplicate operations during scaling events
+- **Graceful Shutdown**: 30-second termination grace period for cleanup
+
 ## Implemented Features
 
 ### ✅ Configuration Management
