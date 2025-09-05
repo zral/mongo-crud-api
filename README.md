@@ -1551,6 +1551,52 @@ curl http://localhost:8080/health
 - **[COLLECTION_FILTERING_SUMMARY.md](COLLECTION_FILTERING_SUMMARY.md)**: Advanced filtering guide
 - **[SCRIPTS_DOCUMENTATION.md](SCRIPTS_DOCUMENTATION.md)**: JavaScript automation engine guide
 
+## 🛠️ Troubleshooting
+
+### **JavaScript Script Execution Issues**
+
+If you encounter errors like `getaddrinfo ENOTFOUND nginx` when JavaScript automation scripts try to make API calls:
+
+**Cause**: Scripts need to make HTTP calls back to the API, but the hostname resolution differs across deployment environments.
+
+**Solutions**:
+
+1. **Kubernetes Environment**: Set the correct service URL
+   ```bash
+   kubectl set env deployment/crud-api -n mongodb-crud SCRIPT_API_BASE_URL=http://crud-api-service:80
+   ```
+
+2. **Docker Compose Environment**: Use the load balancer
+   ```bash
+   export SCRIPT_API_BASE_URL=http://nginx:80
+   ```
+
+3. **Development Environment**: Use localhost
+   ```bash
+   export SCRIPT_API_BASE_URL=http://localhost:3000
+   ```
+
+### **Environment Variable Configuration**
+
+The system automatically detects the deployment environment:
+- **Kubernetes**: Detected by `KUBERNETES_SERVICE_HOST` environment variable
+- **Docker Compose**: Detected by `NGINX_HOST` or `COMPOSE_PROJECT_NAME` variables  
+- **Development**: Falls back to `http://localhost:PORT`
+
+Override with `SCRIPT_API_BASE_URL` for custom configurations.
+
+### **Port Forwarding Issues**
+
+If Kubernetes port forwarding breaks during pod restarts:
+```bash
+# Kill existing port forwarding
+pkill -f "port-forward.*crud-api-service"
+
+# Restart port forwarding
+kubectl port-forward -n mongodb-crud svc/crud-api-service 8080:80 &
+kubectl port-forward -n mongodb-crud svc/frontend-service 3500:3000 &
+```
+
 ## 🤝 Contributing
 
 1. Fork the repository
