@@ -4,7 +4,7 @@ REM MongoDB CRUD API - Windows Test Script
 echo 🧪 MongoDB CRUD API Test Script
 echo ===============================
 
-set API_URL=http://localhost:3000
+set API_URL=http://localhost:8080
 
 REM Function to check if API is running
 echo 🔍 Checking if API is running...

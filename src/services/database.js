@@ -850,7 +850,11 @@ class DatabaseService {
     return await this.executeWithRetry(async () => {
       const collection = this.db.collection('_scripts');
       const query = {
-        collection: collectionName,
+        // Include scripts for specific collection OR global scripts (empty collection)
+        $or: [
+          { collection: collectionName },
+          { collection: "" }
+        ],
         enabled: true
       };
       

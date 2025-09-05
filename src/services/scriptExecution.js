@@ -264,7 +264,7 @@ class ScriptExecutionService {
   /**
    * Create API context for scripts
    */
-  createApiContext(payload, baseUrl = 'http://localhost:3000') {
+  createApiContext(payload, baseUrl = 'http://nginx:80') {
     const self = this;
     
     // Create the context object that will be available to scripts
@@ -396,7 +396,7 @@ class ScriptExecutionService {
   /**
    * Execute a JavaScript snippet safely
    */
-  async executeScript(script, payload, apiBaseUrl = 'http://localhost:3000') {
+  async executeScript(script, payload, apiBaseUrl = 'http://nginx:80') {
     const startTime = Date.now();
     return new Promise((resolve, reject) => {
       try {

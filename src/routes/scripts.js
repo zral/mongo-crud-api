@@ -32,8 +32,18 @@ router.post('/', async (req, res) => {
     const dbService = req.app.locals.dbService;
     const { name, code, collection, events, filters, enabled = true, rateLimit, description } = req.body;
 
+    // Debug: Log the incoming request
+    console.log('=== SCRIPT CREATION DEBUG ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Events field:', events);
+    console.log('Events type:', typeof events);
+    console.log('Events is array:', Array.isArray(events));
+    console.log('Events length:', events ? events.length : 'undefined');
+    console.log('==========================');
+
     // Validate required fields
-    if (!name || !code || !collection || !events || !Array.isArray(events) || events.length === 0) {
+    // Note: collection can be empty string for "all collections" scripts
+    if (!name || !code || collection === undefined || collection === null || !events || !Array.isArray(events) || events.length === 0) {
       return res.status(400).json({
         success: false,
         error: 'Bad Request',
@@ -52,9 +62,10 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Validate JavaScript code (basic syntax check)
+    // Validate JavaScript code (basic syntax check with async/await support)
     try {
-      new Function(code);
+      // Wrap the code in an async function to support await
+      new Function(`(async () => { ${code} })`);
     } catch (syntaxError) {
       return res.status(400).json({
         success: false,
@@ -193,10 +204,11 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    // Validate JavaScript code if provided
+    // Validate JavaScript code if provided (with async/await support)
     if (code) {
       try {
-        new Function(code);
+        // Wrap the code in an async function to support await
+        new Function(`(async () => { ${code} })`);
       } catch (syntaxError) {
         return res.status(400).json({
           success: false,
@@ -223,7 +235,7 @@ router.put('/:id', async (req, res) => {
       ...(name && { name }),
       ...(code && { code }),
       ...(description !== undefined && { description }),
-      ...(collection && { collection }),
+      ...(collection !== undefined && { collection }),
       ...(events && { events }),
       ...(filters !== undefined && { filters }),
       ...(enabled !== undefined && { enabled }),

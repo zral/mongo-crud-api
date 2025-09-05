@@ -70,7 +70,7 @@ Controls API documentation generation.
 # Basic Info
 OPENAPI_TITLE=MongoDB CRUD REST API
 OPENAPI_VERSION=1.0.0
-OPENAPI_BASE_URL=http://localhost:3000
+OPENAPI_BASE_URL=http://localhost:8080
 
 # Contact Information
 OPENAPI_CONTACT_NAME=API Support
@@ -150,7 +150,7 @@ const maxPageSize = config.api.pagination.maxPageSize;
 NODE_ENV=development
 DEV_VERBOSE=true
 DEV_HOT_RELOAD=true
-OPENAPI_BASE_URL=http://localhost:3000
+OPENAPI_BASE_URL=http://localhost:8080
 ```
 
 #### Production

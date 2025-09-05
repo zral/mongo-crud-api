@@ -5,7 +5,7 @@
 echo "🧪 MongoDB CRUD API Test Script"
 echo "==============================="
 
-API_URL="http://localhost:3000"
+API_URL="http://localhost:8080"
 
 # Function to make HTTP requests
 http_request() {

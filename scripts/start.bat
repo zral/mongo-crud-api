@@ -55,7 +55,7 @@ REM Wait for API to be ready
 echo Waiting for API...
 set /a timeout=30
 :wait_api_loop
-curl -f http://localhost:3000/health >nul 2>&1
+curl -f http://localhost:8080/health >nul 2>&1
 if errorlevel 0 (
     echo ✅ API is ready!
     goto success

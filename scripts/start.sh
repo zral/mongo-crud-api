@@ -60,7 +60,7 @@ fi
 echo "Waiting for API..."
 timeout=60
 while [ $timeout -gt 0 ]; do
-    if curl -f http://localhost:3000/health >/dev/null 2>&1; then
+    if curl -f http://localhost:8080/health >/dev/null 2>&1; then
         echo "✅ API is ready!"
         break
     fi
@@ -78,9 +78,10 @@ echo ""
 echo "🎉 MongoDB CRUD API is now running!"
 echo ""
 echo "📋 Service Information:"
-echo "   - API URL: http://localhost:3000"
-echo "   - Health Check: http://localhost:3000/health"
-echo "   - Management API: http://localhost:3000/api/management/collections"
+echo "   - Load Balancer: http://localhost:8080"
+echo "   - Health Check: http://localhost:8080/health"
+echo "   - Management API: http://localhost:8080/api/management/collections"
+echo "   - Frontend UI: http://localhost:3004"
 echo "   - MongoDB: localhost:27017"
 echo ""
 echo "🔧 Available Commands:"

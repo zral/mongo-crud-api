@@ -177,6 +177,7 @@ router.get('/:collection/:id', validateCollectionName, async (req, res, next) =>
 // POST /api/:collection - Create new document
 router.post('/:collection', validateCollectionName, async (req, res, next) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { collection } = req.params;
     const document = req.body;
 
@@ -204,6 +205,7 @@ router.post('/:collection', validateCollectionName, async (req, res, next) => {
 // PUT /api/:collection/:id - Update document by ID
 router.put('/:collection/:id', validateCollectionName, async (req, res, next) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { collection, id } = req.params;
     const update = req.body;
 
@@ -245,6 +247,7 @@ router.put('/:collection/:id', validateCollectionName, async (req, res, next) =>
 // DELETE /api/:collection/:id - Delete document by ID
 router.delete('/:collection/:id', validateCollectionName, async (req, res, next) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { collection, id } = req.params;
 
     // Check if collection exists
