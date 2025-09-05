@@ -97,12 +97,21 @@ const ScriptInterface = () => {
     const value = event.target.value;
     const checked = event.target.checked;
     
-    setFormData(prev => ({
-      ...prev,
-      events: checked 
+    console.log('Event change:', { value, checked });
+    
+    setFormData(prev => {
+      const newEvents = checked 
         ? [...prev.events, value]
-        : prev.events.filter(e => e !== value)
-    }));
+        : prev.events.filter(e => e !== value);
+      
+      console.log('Previous events:', prev.events);
+      console.log('New events:', newEvents);
+      
+      return {
+        ...prev,
+        events: newEvents
+      };
+    });
   };
 
   const resetForm = () => {
@@ -148,11 +157,22 @@ const ScriptInterface = () => {
 
       const events = formData.events || [];
 
+      // Validate that at least one event is selected
+      if (events.length === 0) {
+        setError('Please select at least one event (create, update, or delete)');
+        return;
+      }
+
       const scriptData = {
         ...formData,
         filters,
         events
       };
+
+      // Debug logging
+      console.log('Form data before submission:', formData);
+      console.log('Script data being sent:', scriptData);
+      console.log('Events array:', events);
 
       if (selectedScript) {
         await api.put(`/api/scripts/${selectedScript._id}`, scriptData);
@@ -165,6 +185,7 @@ const ScriptInterface = () => {
       await loadScripts();
       resetForm();
     } catch (err) {
+      console.error('Script submission error:', err);
       setError(`Failed to save script: ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
