@@ -1085,6 +1085,56 @@ class ScriptExecutionService {
       console.error(`❌ Failed to update state for ${scriptId}:`, error);
     }
   }
+
+  /**
+   * Manually trigger a scheduled script execution
+   */
+  async triggerScheduledScript(scriptId) {
+    try {
+      const jobData = this.scheduledJobs.get(scriptId);
+      if (!jobData) {
+        return {
+          success: false,
+          message: `Scheduled script not found: ${scriptId}`
+        };
+      }
+
+      console.log(`🚀 Manually triggering scheduled script: ${jobData.script.name}`);
+
+      // Execute the script with manual trigger payload
+      const manualPayload = {
+        ...jobData.payload,
+        trigger: 'manual',
+        scheduled: true,
+        manualTrigger: true,
+        executionTime: new Date().toISOString(),
+        cronExpression: jobData.cronExpression
+      };
+
+      const result = await this.executeScript(jobData.script, manualPayload);
+
+      // Update last execution time in database
+      await this.updateScheduledScriptExecution(scriptId);
+
+      console.log(`✅ Manually triggered script "${jobData.script.name}" executed successfully:`, result);
+
+      return {
+        success: true,
+        message: `Script "${jobData.script.name}" triggered successfully`,
+        result: result,
+        scriptName: jobData.script.name,
+        executionTime: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error(`❌ Failed to manually trigger script ${scriptId}:`, error);
+      return {
+        success: false,
+        message: `Failed to trigger script: ${error.message}`,
+        error: error.message
+      };
+    }
+  }
 }
 
 module.exports = ScriptExecutionService;

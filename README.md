@@ -38,7 +38,7 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 ### **Cron Scheduling System**
 - **Full Cron Support**: Standard cron expressions (minute, hour, day, month, weekday)
 - **Job Management**: Create, update, delete, and list scheduled scripts
-- **Manual Triggers**: Execute scheduled scripts on-demand for testing
+- **Manual Triggers**: Execute scheduled scripts on-demand for testing and debugging
 - **Real-time Statistics**: Execution counts, success/failure tracking, performance metrics
 - **Expression Validation**: Built-in cron expression validator with helpful error messages
 - **Schedule Overview**: View all active schedules with next execution times

@@ -123,10 +123,36 @@ router.post('/', async (req, res) => {
 });
 
 // Get script statistics
-router.get('/stats', (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const dbService = req.app.locals.dbService;
     const stats = dbService.scriptExecution.getStatistics();
+    
+    // Enhance top scripts with script names
+    if (stats.topScripts && stats.topScripts.length > 0) {
+      const scriptIds = stats.topScripts.map(script => script.scriptId);
+      
+      // Get script details for the top scripts
+      const scripts = await dbService.getAllScripts();
+      const scriptMap = new Map();
+      scripts.forEach(script => {
+        scriptMap.set(script._id.toString(), script.name);
+      });
+      
+      // Add script names to the top scripts
+      stats.topScripts = stats.topScripts.map(script => ({
+        ...script,
+        scriptName: scriptMap.get(script.scriptId) || 'Unknown Script'
+      }));
+    }
+    
+    // Enhance cron stats with script names if available
+    if (stats.cronStats && stats.cronStats.scheduledScripts) {
+      stats.cronStats.scheduledScripts = stats.cronStats.scheduledScripts.map(schedule => ({
+        ...schedule,
+        // scriptName is already included in scheduled scripts
+      }));
+    }
     
     res.json({
       success: true,
@@ -428,6 +454,7 @@ router.post('/admin/clear-rate-limits', (req, res) => {
 // Create new cron schedule (frontend API)
 router.post('/schedule', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { name, cronExpression, scriptCode } = req.body;
 
     if (!name || !cronExpression || !scriptCode) {
@@ -480,6 +507,7 @@ router.post('/schedule', async (req, res) => {
 // Update cron schedule (frontend API)
 router.put('/schedule/:name', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { name } = req.params;
     const { cronExpression, scriptCode } = req.body;
 
@@ -536,6 +564,7 @@ router.put('/schedule/:name', async (req, res) => {
 // Delete cron schedule (frontend API)
 router.delete('/schedule/:name', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { name } = req.params;
 
     const result = await dbService.scriptExecution.unscheduleScript(name);
@@ -561,6 +590,7 @@ router.delete('/schedule/:name', async (req, res) => {
 // Pause cron schedule (frontend API)
 router.post('/schedule/:name/pause', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { name } = req.params;
 
     const result = await dbService.scriptExecution.pauseScheduledScript(name);
@@ -595,6 +625,7 @@ router.post('/schedule/:name/pause', async (req, res) => {
 // Resume cron schedule (frontend API)
 router.post('/schedule/:name/resume', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { name } = req.params;
 
     const result = await dbService.scriptExecution.resumeScheduledScript(name);
@@ -629,6 +660,7 @@ router.post('/schedule/:name/resume', async (req, res) => {
 // Schedule a script with cron expression
 router.post('/:id/schedule', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { id } = req.params;
     const { cronExpression, payload = {} } = req.body;
 
@@ -687,6 +719,7 @@ router.post('/:id/schedule', async (req, res) => {
 // Unschedule a script
 router.delete('/:id/schedule', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { id } = req.params;
 
     const result = await dbService.scriptExecution.unscheduleScript(id);
@@ -736,6 +769,42 @@ router.get('/scheduled/list', async (req, res) => {
 
   } catch (error) {
     console.error('Error getting scheduled scripts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
+// Manually trigger a scheduled script
+router.post('/scheduled/:name/trigger', async (req, res) => {
+  try {
+    const dbService = req.app.locals.dbService;
+    const { name } = req.params;
+
+    const result = await dbService.scriptExecution.triggerScheduledScript(name);
+
+    if (!result.success) {
+      return res.status(404).json({
+        success: false,
+        error: 'Not Found',
+        message: result.message
+      });
+    }
+
+    res.json({
+      success: true,
+      message: result.message,
+      data: {
+        scriptName: result.scriptName,
+        executionTime: result.executionTime,
+        result: result.result
+      }
+    });
+
+  } catch (error) {
+    console.error('Error triggering scheduled script:', error);
     res.status(500).json({
       success: false,
       error: 'Internal Server Error',
@@ -876,6 +945,7 @@ router.get('/cron/validate/:expression', (req, res) => {
 // Validate cron expression (POST with body)
 router.post('/cron/validate', (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { cronExpression } = req.body;
 
     if (!cronExpression) {

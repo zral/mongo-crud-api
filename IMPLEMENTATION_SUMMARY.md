@@ -175,7 +175,7 @@
 - `unscheduleScript()` - Remove scheduled script
 - `rescheduleScript()` - Update existing schedule
 - `getScheduledScripts()` - List all active schedules
-- `triggerScheduledScript()` - Manual execution for testing
+- `triggerScheduledScript()` - Manual execution for testing and debugging
 - `getCronStatistics()` - Comprehensive execution analytics
 - `validateCronExpression()` - Cron expression validation
 

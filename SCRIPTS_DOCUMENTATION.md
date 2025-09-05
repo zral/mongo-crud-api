@@ -40,9 +40,9 @@ PUT    /api/scripts/schedule/{name}   # Reschedule script
 GET    /api/scripts/scheduled/list    # List all scheduled scripts
 GET    /api/scripts/scheduled/{name}  # Get schedule details
 POST   /api/scripts/scheduled/{name}/trigger # Manually trigger scheduled script
+POST   /api/scripts/cron/validate     # Validate cron expression
 GET    /api/scripts/cron/statistics   # Get cron execution statistics
 DELETE /api/scripts/cron/statistics/reset # Reset cron statistics
-GET    /api/scripts/cron/validate/{expression} # Validate cron expression
 ```
 
 ### Create Script
@@ -159,6 +159,58 @@ The system tracks comprehensive statistics for scheduled scripts:
       "status": "active"
     }
   ]
+}
+```
+
+### Manual Script Triggers
+
+Scheduled scripts can be triggered manually for testing or on-demand execution. This is useful for:
+
+- **Testing**: Verify script behavior before deployment
+- **Debugging**: Troubleshoot script issues without waiting for the next scheduled execution
+- **On-Demand Execution**: Run maintenance or cleanup scripts when needed
+- **Development**: Test script changes immediately
+
+**Manual Trigger Request:**
+```bash
+curl -X POST http://localhost:3003/api/scripts/scheduled/daily-cleanup/trigger
+```
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "message": "Script \"daily-cleanup\" triggered successfully",
+  "data": {
+    "scriptName": "daily-cleanup",
+    "executionTime": "2025-09-05T17:36:45.053Z",
+    "result": {
+      "success": true,
+      "output": "Cleanup completed successfully"
+    }
+  }
+}
+```
+
+**Error Response (Script Not Found):**
+```json
+{
+  "success": false,
+  "error": "Not Found",
+  "message": "Scheduled script not found: invalid-script-name"
+}
+```
+
+**Manual Trigger Payload:**
+When manually triggered, scripts receive a special payload indicating the manual execution:
+
+```javascript
+{
+  "trigger": "manual",
+  "scheduled": true,
+  "manualTrigger": true,
+  "executionTime": "2025-09-05T17:36:45.053Z",
+  "cronExpression": "0 2 * * *"
 }
 ```
 
