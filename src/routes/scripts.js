@@ -33,11 +33,11 @@ router.post('/', async (req, res) => {
     const { name, code, collection, events, filters, enabled = true, rateLimit, description } = req.body;
 
     // Validate required fields
-    if (!name || !code || !collection || !events) {
+    if (!name || !code || !collection || !events || !Array.isArray(events) || events.length === 0) {
       return res.status(400).json({
         success: false,
         error: 'Bad Request',
-        message: 'Name, code, collection, and events are required'
+        message: 'Name, code, collection, and at least one event are required'
       });
     }
 
