@@ -104,7 +104,12 @@ class Config {
       execution: {
         timeout: parseInt(process.env.SCRIPT_EXECUTION_TIMEOUT) || 30000,
         maxMemory: parseInt(process.env.SCRIPT_MAX_MEMORY) || 128, // MB
-        sandboxed: process.env.SCRIPT_SANDBOXED !== 'false'
+        sandboxed: process.env.SCRIPT_SANDBOXED !== 'false',
+        // API URL for scripts to make HTTP calls back to the API
+        // In Docker Compose: http://nginx:80
+        // In Kubernetes: http://crud-api-service:80 or localhost
+        // In development: http://localhost:3000
+        apiBaseUrl: process.env.SCRIPT_API_BASE_URL || this.getDefaultApiUrl()
       },
       rateLimit: {
         defaultMaxExecutionsPerMinute: parseInt(process.env.SCRIPT_DEFAULT_RATE_LIMIT) || 30,
@@ -182,6 +187,25 @@ class Config {
     } catch (error) {
       return null;
     }
+  }
+
+  /**
+   * Get default API URL for script execution based on environment
+   */
+  getDefaultApiUrl() {
+    // Check for Kubernetes environment
+    if (process.env.KUBERNETES_SERVICE_HOST) {
+      // In Kubernetes, use the service name
+      return 'http://crud-api-service:80';
+    }
+    
+    // Check for Docker Compose environment (nginx container exists)
+    if (process.env.NGINX_HOST || process.env.COMPOSE_PROJECT_NAME) {
+      return 'http://nginx:80';
+    }
+    
+    // Default to localhost for development
+    return `http://localhost:${this.server.port}`;
   }
 
   /**

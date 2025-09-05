@@ -3,6 +3,7 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 const cron = require('node-cron');
+const config = require('../config');
 
 class ScriptExecutionService {
   constructor() {
@@ -50,8 +51,9 @@ class ScriptExecutionService {
       maxDelayMs: 30000 // Maximum delay between retries (30 seconds)
     };
     
-    // Script execution timeout
-    this.executionTimeout = 30000; // 30 seconds max execution time
+    // Script execution timeout and API configuration
+    this.executionTimeout = config.scripts.execution.timeout || 30000; // 30 seconds max execution time
+    this.apiBaseUrl = config.scripts.execution.apiBaseUrl;
     
     // Start processing retry queue
     this.startRetryProcessor();
@@ -396,12 +398,15 @@ class ScriptExecutionService {
   /**
    * Execute a JavaScript snippet safely
    */
-  async executeScript(script, payload, apiBaseUrl = 'http://nginx:80') {
+  async executeScript(script, payload, apiBaseUrl = null) {
+    // Use configured API URL if not provided
+    const effectiveApiUrl = apiBaseUrl || this.apiBaseUrl;
+    
     const startTime = Date.now();
     return new Promise((resolve, reject) => {
       try {
         // Create a sandbox context with limited access
-        const sandbox = this.createApiContext(payload, apiBaseUrl);
+        const sandbox = this.createApiContext(payload, effectiveApiUrl);
         
         // Add Promise and async/await support
         sandbox.Promise = Promise;

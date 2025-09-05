@@ -124,7 +124,7 @@ kubectl get pods -n mongodb-crud
 
 # Access via port forwarding
 kubectl port-forward -n mongodb-crud svc/crud-api-service 8080:80
-kubectl port-forward -n mongodb-crud svc/frontend-service 3000:3000
+kubectl port-forward -n mongodb-crud svc/frontend-service 3500:3000
 ```
 ### Access the application
 
@@ -136,7 +136,7 @@ MongoDB: localhost:27017
 Redis: localhost:6379  
 
 #### Kubernetes:
-Frontend: http://localhost:3000 (via port-forward)  
+Frontend: http://localhost:3500 (via port-forward)  
 API: http://localhost:8080 (via port-forward)  
 Cluster Status: http://localhost:8080/api/cluster/status  
 Health Check: http://localhost:8080/health  
