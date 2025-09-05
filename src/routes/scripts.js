@@ -29,6 +29,7 @@ router.get('/', async (req, res) => {
 // Create a new script
 router.post('/', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { name, code, collection, events, filters, enabled = true, rateLimit, description } = req.body;
 
     // Validate required fields
@@ -113,6 +114,7 @@ router.post('/', async (req, res) => {
 // Get script statistics
 router.get('/stats', (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const stats = dbService.scriptExecution.getStatistics();
     
     res.json({
@@ -141,6 +143,7 @@ router.get('/stats', (req, res) => {
 // Get a specific script by ID
 router.get('/:id', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { id } = req.params;
     
     if (!ObjectId.isValid(id)) {
@@ -178,6 +181,7 @@ router.get('/:id', async (req, res) => {
 // Update a script
 router.put('/:id', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { id } = req.params;
     const { name, code, collection, events, filters, enabled, rateLimit, description } = req.body;
     
@@ -255,6 +259,7 @@ router.put('/:id', async (req, res) => {
 // Delete a script
 router.delete('/:id', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { id } = req.params;
     
     if (!ObjectId.isValid(id)) {
@@ -295,6 +300,7 @@ router.delete('/:id', async (req, res) => {
 // Test a script execution
 router.post('/:id/test', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { id } = req.params;
     const { testPayload } = req.body;
     
