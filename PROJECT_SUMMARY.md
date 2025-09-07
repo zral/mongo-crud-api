@@ -211,19 +211,19 @@ POST /api/webhooks
 ### Collection Filtering Examples
 ```bash
 # Basic filtering
-GET /api/users?status=active&age=>25
+GET /api/db/users?status=active&age=>25
 
 # Range filtering with multiple conditions
-GET /api/products?price=50..200&category=electronics&inStock=true
+GET /api/db/products?price=50..200&category=electronics&inStock=true
 
 # Text search with field projection
-GET /api/users?search=engineer&fields=name,email,skills&location=Seattle
+GET /api/db/users?search=engineer&fields=name,email,skills&location=Seattle
 
 # Complex MongoDB queries
-GET /api/orders?filter.total={"$gte":100}&filter.status={"$in":["completed","shipped"]}
+GET /api/db/orders?filter.total={"$gte":100}&filter.status={"$in":["completed","shipped"]}
 
 # Wildcard and regex patterns
-GET /api/users?name=John*&email=/.*@company\.com/
+GET /api/db/users?name=John*&email=/.*@company\.com/
 ```
 
 ### Rate Limit Configuration

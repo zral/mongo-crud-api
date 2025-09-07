@@ -208,7 +208,7 @@
 ## API Endpoints
 
 ### Collection Endpoints with Advanced Filtering
-- `GET /api/:collection` - List documents with comprehensive filtering
+- `GET /api/db/:collection` - List documents with comprehensive filtering
   - Supports all MongoDB operators and comparison syntax
   - Field projection: `?fields=name,email` or `?fields=-password`
   - Text search: `?search=keyword&fields=title,description`
@@ -270,19 +270,19 @@ POST /api/webhooks
 ### Collection Filtering Examples
 ```bash
 # Basic filtering
-GET /api/users?status=active&age=>25
+GET /api/db/users?status=active&age=>25
 
 # Range filtering  
-GET /api/products?price=50..200&category=electronics
+GET /api/db/products?price=50..200&category=electronics
 
 # Field projection
-GET /api/users?fields=name,email,age&department=Engineering
+GET /api/db/users?fields=name,email,age&department=Engineering
 
 # Text search
-GET /api/users?search=developer&fields=name,skills&location=Seattle
+GET /api/db/users?search=developer&fields=name,skills&location=Seattle
 
 # Complex MongoDB query
-GET /api/orders?filter.total={"$gte":100}&filter.status={"$in":["completed","shipped"]}
+GET /api/db/orders?filter.total={"$gte":100}&filter.status={"$in":["completed","shipped"]}
 ```
 
 ## Technical Implementation Details
