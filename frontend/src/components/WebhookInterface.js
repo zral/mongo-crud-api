@@ -408,6 +408,23 @@ const WebhookInterface = () => {
               </div>
 
               <div className="form-group">
+                <label htmlFor="excludeFields" style={{color: '#dc2626', fontWeight: 'bold'}}>
+                  🔒 Exclude Fields (Security)
+                  <small style={{display: 'block', color: '#666', fontWeight: 'normal'}}>
+                    Comma-separated list of fields to exclude from webhook payload (e.g., password, ssn, api_key)
+                  </small>
+                </label>
+                <input
+                  type="text"
+                  id="excludeFields"
+                  value={formData.excludeFields}
+                  onChange={(e) => setFormData(prev => ({ ...prev, excludeFields: e.target.value }))}
+                  placeholder="password, ssn, sensitive_data, api_key"
+                  style={{borderColor: '#dc2626', borderWidth: '2px'}}
+                />
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="filters">
                   Filters (JSON)
                   <small>Leave empty ({}) to match all documents</small>
@@ -418,20 +435,6 @@ const WebhookInterface = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, filters: e.target.value }))}
                   placeholder='{"field": "value"} or {"age": {"$gt": 18}}'
                   rows={4}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="excludeFields">
-                  Exclude Fields
-                  <small>Comma-separated list of fields to exclude from webhook payload</small>
-                </label>
-                <input
-                  type="text"
-                  id="excludeFields"
-                  value={formData.excludeFields}
-                  onChange={(e) => setFormData(prev => ({ ...prev, excludeFields: e.target.value }))}
-                  placeholder="password, ssn, sensitive_data"
                 />
               </div>
 
