@@ -212,7 +212,8 @@ class EnhancedScriptExecutionService extends EventEmitter {
         scriptCode,
         scriptOptions,
         job,
-        scheduledAt: new Date().toISOString()
+        scheduledAt: new Date().toISOString(),
+        isPaused: false
       });
 
       // Start the job
@@ -477,6 +478,104 @@ class EnhancedScriptExecutionService extends EventEmitter {
     this.scheduledScripts.clear();
     
     console.log('✅ All cron jobs stopped');
+  }
+
+  /**
+   * Pause a scheduled script
+   */
+  async pauseScheduledScript(scriptId) {
+    if (!this.leaderElection.isLeader) {
+      return { success: false, message: 'Not the cron leader, cannot pause scripts' };
+    }
+
+    const job = this.cronJobs.get(scriptId);
+    const scheduledScript = this.scheduledScripts.get(scriptId);
+    
+    if (!job || !scheduledScript) {
+      return { success: false, message: `No scheduled job found for script: ${scriptId}` };
+    }
+
+    if (scheduledScript.isPaused) {
+      return { success: false, message: `Script ${scriptId} is already paused` };
+    }
+
+    try {
+      job.stop();
+      scheduledScript.isPaused = true;
+      
+      // Update database state
+      await this.updateScheduledScriptState(scriptId, false);
+      
+      console.log(`⏸️ Paused scheduled script: ${scriptId}`);
+      
+      return {
+        success: true,
+        message: `Script ${scriptId} has been paused`,
+        status: 'paused'
+      };
+    } catch (error) {
+      console.error(`❌ Error pausing script ${scriptId}:`, error.message);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Resume a paused scheduled script
+   */
+  async resumeScheduledScript(scriptId) {
+    if (!this.leaderElection.isLeader) {
+      return { success: false, message: 'Not the cron leader, cannot resume scripts' };
+    }
+
+    const job = this.cronJobs.get(scriptId);
+    const scheduledScript = this.scheduledScripts.get(scriptId);
+    
+    if (!job || !scheduledScript) {
+      return { success: false, message: `No scheduled job found for script: ${scriptId}` };
+    }
+
+    if (!scheduledScript.isPaused) {
+      return { success: false, message: `Script ${scriptId} is already running` };
+    }
+
+    try {
+      job.start();
+      scheduledScript.isPaused = false;
+      
+      // Update database state
+      await this.updateScheduledScriptState(scriptId, true);
+      
+      console.log(`▶️ Resumed scheduled script: ${scriptId}`);
+      
+      return {
+        success: true,
+        message: `Script ${scriptId} has been resumed`,
+        status: 'running'
+      };
+    } catch (error) {
+      console.error(`❌ Error resuming script ${scriptId}:`, error.message);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Update scheduled script state in database
+   */
+  async updateScheduledScriptState(scriptId, isActive) {
+    try {
+      await this.databaseService.getCollection('_scheduled_scripts')
+        .updateOne(
+          { scriptId },
+          { 
+            $set: { 
+              isActive,
+              updatedAt: new Date()
+            }
+          }
+        );
+    } catch (error) {
+      console.error(`❌ Error updating script state in database:`, error.message);
+    }
   }
 
   /**

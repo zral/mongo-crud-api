@@ -606,9 +606,12 @@ router.delete('/schedule/:name', async (req, res) => {
 router.post('/schedule/:name/pause', async (req, res) => {
   try {
     const dbService = req.app.locals.dbService;
+    const enhancedService = req.app.locals.enhancedScriptExecutionService;
     const { name } = req.params;
 
-    const result = await dbService.scriptExecution.pauseScheduledScript(name);
+    // Use enhanced service if available (for multi-instance setups)
+    const scriptService = enhancedService || dbService.scriptExecution;
+    const result = await scriptService.pauseScheduledScript(name);
 
     if (!result.success) {
       return res.status(404).json({
@@ -641,9 +644,12 @@ router.post('/schedule/:name/pause', async (req, res) => {
 router.post('/schedule/:name/resume', async (req, res) => {
   try {
     const dbService = req.app.locals.dbService;
+    const enhancedService = req.app.locals.enhancedScriptExecutionService;
     const { name } = req.params;
 
-    const result = await dbService.scriptExecution.resumeScheduledScript(name);
+    // Use enhanced service if available (for multi-instance setups)
+    const scriptService = enhancedService || dbService.scriptExecution;
+    const result = await scriptService.resumeScheduledScript(name);
 
     if (!result.success) {
       return res.status(404).json({
