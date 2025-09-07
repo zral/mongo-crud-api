@@ -732,6 +732,10 @@ class DatabaseService {
             return;
           }
 
+          // Filter out excluded fields from document data
+          const filteredDocument = this.filterExcludedFields(document, webhook.excludeFields);
+          const filteredOldDocument = oldDocument ? this.filterExcludedFields(oldDocument, webhook.excludeFields) : null;
+
           const payload = {
             event,
             webhook: {
@@ -741,8 +745,8 @@ class DatabaseService {
             collection: collectionName,
             timestamp: new Date().toISOString(),
             data: {
-              document: document,
-              ...(oldDocument && { oldDocument })
+              document: filteredDocument,
+              ...(filteredOldDocument && { oldDocument: filteredOldDocument })
             }
           };
 
@@ -757,6 +761,44 @@ class DatabaseService {
     } catch (error) {
       console.error(`Failed to trigger webhooks for ${event} on ${collectionName}:`, error.message);
     }
+  }
+
+  /**
+   * Remove specified fields from a document
+   * @param {Object} document - The document to filter
+   * @param {Array} excludeFields - Array of field names to exclude
+   * @returns {Object} - Filtered document
+   */
+  filterExcludedFields(document, excludeFields = []) {
+    if (!excludeFields || excludeFields.length === 0 || !document) {
+      return document;
+    }
+
+    // Create a deep copy to avoid modifying the original document
+    const filtered = JSON.parse(JSON.stringify(document));
+    
+    // Remove excluded fields
+    excludeFields.forEach(field => {
+      // Support nested field exclusion with dot notation
+      if (field.includes('.')) {
+        const parts = field.split('.');
+        let current = filtered;
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (current && typeof current === 'object' && current[parts[i]]) {
+            current = current[parts[i]];
+          } else {
+            return; // Field doesn't exist
+          }
+        }
+        if (current && typeof current === 'object') {
+          delete current[parts[parts.length - 1]];
+        }
+      } else {
+        delete filtered[field];
+      }
+    });
+
+    return filtered;
   }
 
   // Script management functions

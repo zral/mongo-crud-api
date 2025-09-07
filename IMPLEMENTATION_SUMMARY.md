@@ -72,7 +72,24 @@
 - Current rate limit settings and utilization
 - Per-webhook performance metrics
 
-### 5. Advanced Collection Filtering System ✅
+### 5. Webhook Field Exclusion System ✅
+**Location**: `src/routes/webhooks.js`, `src/services/database.js`
+
+**Features Implemented**:
+- `excludeFields` parameter support in webhook creation and updates
+- Simple field exclusion for top-level fields (e.g., `password`, `ssn`)
+- Nested field exclusion using dot notation (e.g., `user.credentials.password`)
+- Deep copy protection to preserve original documents
+- Real-time filtering during webhook payload construction
+- Validation of excludeFields as array of strings
+- Frontend integration with comma-separated input field
+
+**Core Functions**:
+- `filterExcludedFields()` - Main field filtering function with deep copy protection
+- Enhanced webhook payload construction with field exclusion
+- API validation for excludeFields parameter
+
+### 6. Advanced Collection Filtering System ✅
 **Location**: `src/services/filterService.js`, `src/routes/collections.js`
 
 **Features**:
@@ -94,11 +111,13 @@
 - **Nested Field Access**: `address.city=Seattle` notation
 - **Field Projection**: Include/exclude specific fields (`fields=name,email`)
 
-### 6. Enhanced Frontend UI ✅
+### 7. Enhanced Frontend UI ✅
 **Location**: `frontend/src/components/WebhookInterface.js`, `frontend/src/components/BulkUploadInterface.js`
 
 **Features**:
 - Rate limit configuration in webhook creation/editing dialogs
+- **Field exclusion input** with comma-separated field names and validation
+- **Excluded fields column** in webhook table showing configured exclusions
 - Visual indicators for custom vs default rate limits
 - Bulk data upload interface with drag-and-drop functionality
 - CSV/Excel file preview and validation before upload

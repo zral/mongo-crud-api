@@ -705,7 +705,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                     borderRadius: '4px',
                     fontSize: '14px'
                   }}>
-                    <span style={{ fontWeight: '500' }}>{script.scriptName || script.scriptId}</span>
+                    <span style={{ fontWeight: '500' }}>{script.scriptName || script.name || script.scriptId}</span>
                     <span style={{ fontWeight: 'bold', color: '#007bff' }}>{script.executions.toLocaleString()} executions</span>
                   </div>
                 ))}

@@ -4,7 +4,6 @@ const WebhookDeliveryService = require('../services/webhookDelivery');
 
 const router = express.Router();
 const { ObjectId } = require('mongodb');
-const dbService = require('../services/database');
 
 // Get all webhooks
 router.get('/', async (req, res) => {
@@ -30,7 +29,7 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const dbService = req.app.locals.dbService;
-    const { name, url, collection, events, filters, enabled = true, rateLimit } = req.body;
+    const { name, url, collection, events, filters, enabled = true, rateLimit, excludeFields } = req.body;
 
     // Validate required fields
     if (!name || !url || !collection || !events) {
@@ -63,6 +62,15 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Validate excludeFields if provided
+    if (excludeFields && !Array.isArray(excludeFields)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bad Request',
+        message: 'excludeFields must be an array of field names'
+      });
+    }
+
     // Validate and set rate limit settings
     const defaultRateLimit = {
       maxRequestsPerMinute: 60,
@@ -87,6 +95,7 @@ router.post('/', async (req, res) => {
       collection,
       events,
       filters: filters || {},
+      excludeFields: excludeFields || [],
       enabled,
       rateLimit: webhookRateLimit,
       createdAt: new Date(),
@@ -113,6 +122,7 @@ router.post('/', async (req, res) => {
 // Get webhook delivery statistics
 router.get('/stats', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const stats = dbService.webhookDelivery.getStatistics();
     res.json({
       success: true,
@@ -140,6 +150,7 @@ router.get('/stats', async (req, res) => {
 // Get a specific webhook
 router.get('/:id', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { id } = req.params;
     const webhook = await dbService.getWebhookById(id);
     
@@ -168,8 +179,9 @@ router.get('/:id', async (req, res) => {
 // Update a webhook
 router.put('/:id', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { id } = req.params;
-    const { name, url, collection, events, filters, enabled, rateLimit } = req.body;
+    const { name, url, collection, events, filters, enabled, rateLimit, excludeFields } = req.body;
 
     // Validate events if provided
     if (events) {
@@ -197,6 +209,15 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // Validate excludeFields if provided
+    if (excludeFields && !Array.isArray(excludeFields)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bad Request',
+        message: 'excludeFields must be an array of field names'
+      });
+    }
+
     // Validate and set rate limit settings
     let webhookRateLimit = undefined;
     if (rateLimit) {
@@ -214,6 +235,7 @@ router.put('/:id', async (req, res) => {
       ...(collection && { collection }),
       ...(events && { events }),
       ...(filters !== undefined && { filters }),
+      ...(excludeFields !== undefined && { excludeFields }),
       ...(enabled !== undefined && { enabled }),
       ...(webhookRateLimit && { rateLimit: webhookRateLimit }),
       updatedAt: new Date()
@@ -247,6 +269,7 @@ router.put('/:id', async (req, res) => {
 // Delete a webhook
 router.delete('/:id', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { id } = req.params;
     const result = await dbService.deleteWebhook(id);
     
@@ -275,6 +298,7 @@ router.delete('/:id', async (req, res) => {
 // Test a webhook
 router.post('/:id/test', async (req, res) => {
   try {
+    const dbService = req.app.locals.dbService;
     const { id } = req.params;
     const webhook = await dbService.getWebhookById(id);
     

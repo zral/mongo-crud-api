@@ -15,6 +15,7 @@ const WebhookInterface = () => {
     collection: '',
     events: [],
     filters: '{}',
+    excludeFields: '',
     enabled: true,
     rateLimit: {
       maxRequestsPerMinute: 60,
@@ -59,6 +60,7 @@ const WebhookInterface = () => {
       collection: '',
       events: [],
       filters: '{}',
+      excludeFields: '',
       enabled: true,
       rateLimit: {
         maxRequestsPerMinute: 60,
@@ -87,6 +89,7 @@ const WebhookInterface = () => {
         collection: webhook.collection,
         events: webhook.events,
         filters: JSON.stringify(webhook.filters, null, 2),
+        excludeFields: webhook.excludeFields ? webhook.excludeFields.join(', ') : '',
         enabled: webhook.enabled,
         rateLimit: webhook.rateLimit || defaultRateLimit,
         useCustomRateLimit: hasCustomRateLimit
@@ -115,12 +118,18 @@ const WebhookInterface = () => {
         return;
       }
 
+      // Parse excludeFields
+      const excludeFields = formData.excludeFields
+        ? formData.excludeFields.split(',').map(field => field.trim()).filter(field => field)
+        : [];
+
       const webhookData = {
         name: formData.name,
         url: formData.url,
         collection: formData.collection,
         events: formData.events,
         filters,
+        excludeFields,
         enabled: formData.enabled
       };
 
@@ -161,10 +170,10 @@ const WebhookInterface = () => {
   const handleTest = async (webhookId, webhookName) => {
     try {
       const response = await apiService.testWebhook(webhookId);
-      if (response.data.response.success) {
+      if (response.data.success) {
         toast.success('Webhook test successful');
       } else {
-        toast.error(`Webhook test failed: ${response.data.response.statusText}`);
+        toast.error(`Webhook test failed: ${response.data.message || 'Unknown error'}`);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to test webhook');
@@ -259,6 +268,7 @@ const WebhookInterface = () => {
                   <th>URL</th>
                   <th>Collection</th>
                   <th>Events</th>
+                  <th>Excluded Fields</th>
                   <th>Rate Limit</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -276,6 +286,12 @@ const WebhookInterface = () => {
                     <td>{webhook.collection}</td>
                     <td className="events-cell">
                       {formatEvents(webhook.events)}
+                    </td>
+                    <td className="excluded-fields-cell">
+                      {webhook.excludeFields && webhook.excludeFields.length > 0 
+                        ? webhook.excludeFields.join(', ')
+                        : 'None'
+                      }
                     </td>
                     <td className="rate-limit-cell">
                       {formatRateLimit(webhook)}
@@ -402,6 +418,20 @@ const WebhookInterface = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, filters: e.target.value }))}
                   placeholder='{"field": "value"} or {"age": {"$gt": 18}}'
                   rows={4}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="excludeFields">
+                  Exclude Fields
+                  <small>Comma-separated list of fields to exclude from webhook payload</small>
+                </label>
+                <input
+                  type="text"
+                  id="excludeFields"
+                  value={formData.excludeFields}
+                  onChange={(e) => setFormData(prev => ({ ...prev, excludeFields: e.target.value }))}
+                  placeholder="password, ssn, sensitive_data"
                 />
               </div>
 

@@ -29,6 +29,7 @@ The MongoDB CRUD API has been successfully transformed into a **complete, produc
 - **Advanced Rate Limiting**: Per-webhook rate limits (1-300 req/min) with sliding window algorithm
 - **Intelligent Retry System**: Exponential backoff retry mechanism with configurable limits
 - **MongoDB-Style Filtering**: Complex document filtering for selective webhook triggering
+- **Field Exclusion**: Secure sensitive data protection with configurable field exclusion
 - **Delivery Statistics**: Comprehensive monitoring and performance analytics
 - **Management Interface**: Full CRUD operations for webhook configuration
 

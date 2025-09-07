@@ -10,6 +10,7 @@ The MongoDB CRUD API includes a sophisticated webhook system that provides real-
 - Real-time webhook delivery for database operations
 - Support for create, update, and delete events
 - MongoDB-style filtering for selective webhook triggering
+- **Field exclusion for sensitive data protection**
 - Asynchronous processing for high performance
 
 ### **Advanced Rate Limiting**
@@ -55,6 +56,7 @@ GET /api/webhooks
           "status": "active",
           "age": { "$gte": 18 }
         },
+        "excludeFields": ["password", "ssn", "api_key"],
         "rateLimit": {
           "maxRequestsPerMinute": 120,
           "maxRetries": 5,
@@ -85,6 +87,7 @@ Content-Type: application/json
     "status": { "$in": ["pending", "processing"] },
     "total": { "$gte": 100 }
   },
+  "excludeFields": ["customer.creditCard", "payment.details", "internal.notes"],
   "rateLimit": {
     "maxRequestsPerMinute": 200,
     "maxRetries": 3,
@@ -106,6 +109,32 @@ Content-Type: application/json
     // ... webhook details
   }
 }
+```
+
+### **Webhook Parameters**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | Unique identifier for the webhook |
+| `url` | string | Yes | Target URL for webhook delivery (must be valid HTTP/HTTPS) |
+| `collection` | string | Yes | MongoDB collection to monitor |
+| `events` | array | Yes | Array of events to trigger on: `["create", "update", "delete"]` |
+| `filters` | object | No | MongoDB-style query filters for selective triggering |
+| `excludeFields` | array | No | Array of field names to exclude from webhook payload |
+| `enabled` | boolean | No | Whether the webhook is active (default: `true`) |
+| `rateLimit` | object | No | Rate limiting configuration (uses defaults if not specified) |
+
+#### **excludeFields Examples**
+
+```json
+// Simple field exclusion
+"excludeFields": ["password", "ssn", "api_key"]
+
+// Nested field exclusion with dot notation
+"excludeFields": ["user.credentials.password", "billing.cvv", "internal.notes"]
+
+// Mixed exclusions
+"excludeFields": ["password", "payment.details", "metadata.sensitive"]
 ```
 
 #### Update Webhook
@@ -323,7 +352,8 @@ Webhooks support full MongoDB query syntax for selective triggering:
     "subscription.tier": { "$in": ["premium", "enterprise"] },
     "status": "active",
     "email": { "$regex": ".*@(company|enterprise)\\.com$" }
-  }
+  },
+  "excludeFields": ["password", "ssn", "personal.taxId", "billing.creditCard"]
 }
 ```
 
@@ -337,7 +367,8 @@ Webhooks support full MongoDB query syntax for selective triggering:
     "total": { "$gte": 1000 },
     "status": "pending",
     "customer.type": { "$in": ["enterprise", "vip"] }
-  }
+  },
+  "excludeFields": ["customer.payment.details", "billing.cvv", "internal.notes"]
 }
 ```
 
@@ -355,7 +386,198 @@ Webhooks support full MongoDB query syntax for selective triggering:
 }
 ```
 
-## 📦 Webhook Payload Structure
+## � Field Exclusion System
+
+### **Overview**
+The webhook system includes powerful field exclusion capabilities to protect sensitive data from being sent to external endpoints. This feature allows you to exclude specific fields from webhook payloads while maintaining full functionality for non-sensitive data.
+
+### **Field Exclusion Features**
+- **Simple field exclusion**: Remove top-level fields like `password`, `ssn`, `api_key`
+- **Nested field exclusion**: Remove nested fields using dot notation like `user.credentials.password`
+- **Per-webhook configuration**: Each webhook can have different exclusion rules
+- **Real-time filtering**: Applied automatically during webhook delivery
+- **Deep copy protection**: Original documents remain unchanged
+
+### **Basic Field Exclusion**
+
+```json
+{
+  "name": "User Registration Webhook",
+  "url": "https://api.partner.com/users",
+  "collection": "users",
+  "events": ["create", "update"],
+  "excludeFields": ["password", "ssn", "creditCard", "api_key"],
+  "filters": {}
+}
+```
+
+**Original Document:**
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "secret123",
+  "ssn": "123-45-6789",
+  "role": "user",
+  "api_key": "sk-1234567890abcdef"
+}
+```
+
+**Webhook Payload (Filtered):**
+```json
+{
+  "event": "create",
+  "data": {
+    "document": {
+      "_id": "507f1f77bcf86cd799439011",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "user"
+      // password, ssn, and api_key excluded
+    }
+  }
+}
+```
+
+### **Nested Field Exclusion**
+
+```json
+{
+  "name": "Order Processing Webhook",
+  "url": "https://api.fulfillment.com/orders",
+  "collection": "orders",
+  "events": ["create"],
+  "excludeFields": [
+    "customer.payment.creditCard",
+    "customer.personal.ssn",
+    "billing.details.cvv",
+    "internal.notes",
+    "analytics.sensitive"
+  ]
+}
+```
+
+**Original Document:**
+```json
+{
+  "_id": "507f1f77bcf86cd799439012",
+  "orderId": "ORD-12345",
+  "customer": {
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "payment": {
+      "method": "credit_card",
+      "creditCard": "4111-1111-1111-1111",
+      "expiryDate": "12/25"
+    },
+    "personal": {
+      "address": "123 Main St",
+      "ssn": "987-65-4321"
+    }
+  },
+  "billing": {
+    "amount": 99.99,
+    "details": {
+      "cvv": "123",
+      "billingAddress": "123 Main St"
+    }
+  },
+  "internal": {
+    "notes": "VIP customer - handle with care",
+    "assignedAgent": "agent-001"
+  }
+}
+```
+
+**Webhook Payload (Filtered):**
+```json
+{
+  "event": "create",
+  "data": {
+    "document": {
+      "_id": "507f1f77bcf86cd799439012",
+      "orderId": "ORD-12345",
+      "customer": {
+        "name": "Jane Smith",
+        "email": "jane@example.com",
+        "payment": {
+          "method": "credit_card",
+          "expiryDate": "12/25"
+          // creditCard excluded
+        },
+        "personal": {
+          "address": "123 Main St"
+          // ssn excluded
+        }
+      },
+      "billing": {
+        "amount": 99.99,
+        "details": {
+          "billingAddress": "123 Main St"
+          // cvv excluded
+        }
+      },
+      "internal": {
+        "assignedAgent": "agent-001"
+        // notes excluded
+      }
+    }
+  }
+}
+```
+
+### **Field Exclusion Use Cases**
+
+#### **User Authentication Webhook**
+```json
+{
+  "excludeFields": [
+    "password",
+    "passwordHash",
+    "salt",
+    "resetToken",
+    "mfaSecret",
+    "recovery.codes"
+  ]
+}
+```
+
+#### **Financial Data Webhook**
+```json
+{
+  "excludeFields": [
+    "payment.creditCard",
+    "payment.bankAccount",
+    "billing.cvv",
+    "customer.ssn",
+    "customer.taxId"
+  ]
+}
+```
+
+#### **Enterprise Integration Webhook**
+```json
+{
+  "excludeFields": [
+    "internal.confidential",
+    "system.apiKeys",
+    "compliance.sensitive",
+    "audit.personalData",
+    "metadata.classified"
+  ]
+}
+```
+
+### **Best Practices**
+
+1. **Data Classification**: Identify sensitive fields before creating webhooks
+2. **Principle of Least Privilege**: Only include necessary data in webhooks
+3. **Regular Audits**: Review excluded fields periodically
+4. **Documentation**: Maintain clear documentation of exclusion policies
+5. **Testing**: Use webhook test functionality to verify field exclusion
+
+## �📦 Webhook Payload Structure
 
 ### **Standard Payload Format**
 
@@ -393,6 +615,8 @@ Webhooks support full MongoDB query syntax for selective triggering:
   }
 }
 ```
+
+> **Note**: When `excludeFields` is configured for a webhook, the specified fields are automatically removed from the `document` and `previousDocument` objects in the payload. The original document in the database remains unchanged - only the webhook payload is filtered.
 
 ### **Event-Specific Payloads**
 
@@ -642,8 +866,10 @@ curl http://localhost:3001/api/webhooks/stats
 
 #### **Security**
 - Use HTTPS endpoints for webhook URLs
+- **Configure field exclusion** to protect sensitive data from external exposure
 - Implement webhook signature verification (planned enhancement)
 - Validate webhook payloads in your handlers
 - Monitor for unusual webhook activity
+- **Regular audit** of excluded fields and webhook configurations
 
-This webhook system provides enterprise-grade reliability and flexibility, making it suitable for production deployments with high-volume webhook requirements and complex integration scenarios.
+This webhook system provides enterprise-grade reliability and flexibility with advanced data privacy controls, making it suitable for production deployments with high-volume webhook requirements, complex integration scenarios, and strict data protection compliance needs.

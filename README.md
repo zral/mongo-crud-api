@@ -22,6 +22,7 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 - **Advanced Rate Limiting**: Per-webhook rate limits (1-300 req/min) with sliding window algorithm
 - **Intelligent Retry System**: Exponential backoff retry mechanism with configurable limits
 - **MongoDB-Style Filtering**: Complex document filtering for selective webhook triggering
+- **Field Exclusion**: Protect sensitive data by excluding specific fields from webhook payloads
 - **Comprehensive Management**: Full CRUD operations for webhook configuration
 
 ### **JavaScript Automation Engine**
@@ -405,6 +406,7 @@ curl -X GET "http://localhost:3003/api/db/bulk/employees/template?sampleData=tru
 - **Per-Webhook Rate Limiting**: Individual rate limits from 1-300 requests/minute
 - **Intelligent Retry System**: Exponential backoff with configurable retry attempts
 - **Advanced Filtering**: MongoDB-style filters for selective webhook triggering
+- **Field Exclusion**: Protect sensitive data by excluding specific fields from payloads
 - **Background Processing**: Asynchronous delivery with queue management
 
 ### **Rate Limiting Configuration**
@@ -437,6 +439,7 @@ curl -X POST http://localhost:3003/api/webhooks \
       "status": {"$in": ["confirmed", "processing"]},
       "total": {"$gte": 100}
     },
+    "excludeFields": ["customer.creditCard", "payment.details", "internal.notes"],
     "rateLimit": {
       "maxRequestsPerMinute": 200,
       "maxRetries": 5,
@@ -459,6 +462,7 @@ curl -X POST http://localhost:3003/api/webhooks \
       "email": {"$regex": ".*@(company|enterprise)\\.com$"},
       "status": "active"
     },
+    "excludeFields": ["password", "ssn", "personal.taxId", "billing.creditCard"],
     "rateLimit": {
       "maxRequestsPerMinute": 60,
       "maxRetries": 3,

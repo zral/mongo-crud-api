@@ -139,6 +139,21 @@ router.get('/stats', async (req, res) => {
         scriptMap.set(script._id.toString(), script.name);
       });
       
+      // Also check scheduled scripts collection for additional script names
+      try {
+        const db = dbService.getDb();
+        const scheduledScripts = await db.collection('_scheduled_scripts').find({}).toArray();
+        
+        scheduledScripts.forEach(scheduledScript => {
+          // Add both the scriptId and scriptName to the map
+          if (scheduledScript.scriptId) {
+            scriptMap.set(scheduledScript.scriptId, scheduledScript.scriptName || scheduledScript.scriptId);
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching scheduled scripts for name mapping:', error);
+      }
+      
       // Add script names to the top scripts
       stats.topScripts = stats.topScripts.map(script => ({
         ...script,

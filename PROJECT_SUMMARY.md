@@ -18,6 +18,7 @@ This project has successfully implemented a comprehensive Node.js REST API that 
 ### 🔄 Webhook System (Enterprise-Grade)
 - **Event-Driven Architecture**: Real-time webhooks for collection changes (create, update, delete)
 - **MongoDB-Style Filtering**: Advanced webhook filters with full operator support
+- **Field Exclusion**: Protect sensitive data by excluding specific fields from webhook payloads
 - **Per-Webhook Rate Limiting**: Individual rate limit configuration per webhook
 - **Retry Mechanism**: Intelligent exponential backoff retry system
 - **Delivery Statistics**: Comprehensive webhook performance monitoring
