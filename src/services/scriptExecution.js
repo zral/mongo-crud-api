@@ -724,9 +724,20 @@ class ScriptExecutionService {
   getScheduledScripts() {
     const scheduled = [];
     for (const [scriptId, jobData] of this.scheduledJobs.entries()) {
+      // Safe access to script name with fallback
+      const scriptName = (jobData.script && jobData.script.name) 
+        ? jobData.script.name 
+        : `Script-${scriptId}`;
+      
+      // Safe access to script code with fallback
+      const scriptCode = (jobData.script && jobData.script.code) 
+        ? jobData.script.code 
+        : '';
+      
       scheduled.push({
         scriptId,
-        scriptName: jobData.script.name,
+        scriptName,
+        scriptCode,
         cronExpression: jobData.cronExpression,
         createdAt: jobData.createdAt,
         lastExecution: jobData.lastExecution,
