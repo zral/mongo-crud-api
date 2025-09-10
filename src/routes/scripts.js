@@ -777,7 +777,7 @@ router.get('/scheduled/list', async (req, res) => {
   try {
     const dbService = req.app.locals.dbService;
     const scheduledScripts = dbService.scriptExecution.getScheduledScripts();
-    const cronStats = dbService.scriptExecution.getCronStatistics();
+    const cronStats = await dbService.scriptExecution.getCronStatistics();
 
     res.json({
       success: true,

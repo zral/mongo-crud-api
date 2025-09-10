@@ -4,11 +4,18 @@ const http = require('http');
 const { URL } = require('url');
 const cron = require('node-cron');
 const config = require('../config');
+const RedisDistributedLock = require('./redisDistributedLock');
 
 class ScriptExecutionService {
   constructor() {
     // Database reference will be set by setDatabase()
     this.db = null;
+    
+    // Redis distributed lock for cron coordination
+    this.distributedLock = new RedisDistributedLock({
+      host: process.env.REDIS_HOST || 'redis',
+      port: process.env.REDIS_PORT || 6379
+    });
     
     // Rate limiting: Map of script IDs to their last execution times and counts
     this.rateLimitMap = new Map();
@@ -641,10 +648,17 @@ class ScriptExecutionService {
     
     console.log(`📅 Scheduling script "${script.name}" with cron: ${cronExpression}`);
     
-    // Create and start the cron job
+    // Create and start the cron job with distributed locking
     const job = cron.schedule(cronExpression, async () => {
+      const lockAcquired = await this.distributedLock.acquireLock(scriptId, 300); // 5 minute lock
+      
+      if (!lockAcquired) {
+        console.log(`🚫 Script "${script.name}" already executing on another instance, skipping...`);
+        return;
+      }
+      
       try {
-        console.log(`⏰ Executing scheduled script: ${script.name}`);
+        console.log(`⏰ Executing scheduled script: ${script.name} (distributed lock acquired)`);
         this.cronStats.cronExecutions++;
         this.cronStats.lastCronExecution = new Date().toISOString();
         
@@ -657,7 +671,8 @@ class ScriptExecutionService {
           trigger: 'cron',
           scheduled: true,
           executionTime: new Date().toISOString(),
-          cronExpression: cronExpression
+          cronExpression: cronExpression,
+          distributedExecution: true
         };
         
         const result = await this.executeScript(script, cronPayload);
@@ -666,6 +681,9 @@ class ScriptExecutionService {
       } catch (error) {
         this.cronStats.failedCronExecutions++;
         console.error(`❌ Scheduled script "${script.name}" execution failed:`, error);
+      } finally {
+        // Always release the lock after execution
+        await this.distributedLock.releaseLock(scriptId);
       }
     }, {
       scheduled: true // Start immediately and set running state
@@ -844,12 +862,42 @@ class ScriptExecutionService {
   /**
    * Get cron scheduling statistics
    */
-  getCronStatistics() {
+  async getCronStatistics() {
+    const distributedLocks = await this.getDistributedLockInfo();
+    
     return {
       ...this.cronStats,
       activeSchedules: this.scheduledJobs.size,
-      scheduledScripts: this.getScheduledScripts()
+      scheduledScripts: this.getScheduledScripts(),
+      distributedLocks
     };
+  }
+
+  /**
+   * Get distributed lock information
+   */
+  async getDistributedLockInfo() {
+    try {
+      const locks = await this.distributedLock.getAllLocks();
+      return {
+        activeLocks: locks.length,
+        instanceId: this.distributedLock.instanceId,
+        locks: locks.map(lock => ({
+          scriptId: lock.scriptId,
+          instance: lock.instance,
+          ttl: lock.ttl,
+          ownedByThisInstance: lock.ownedByThisInstance
+        }))
+      };
+    } catch (error) {
+      console.error('❌ Error getting distributed lock info:', error);
+      return {
+        activeLocks: 0,
+        instanceId: this.distributedLock.instanceId,
+        locks: [],
+        error: error.message
+      };
+    }
   }
 
   /**
@@ -1019,10 +1067,17 @@ class ScriptExecutionService {
       
       for (const scriptDoc of scheduledScripts) {
         try {
-          // Recreate the cron job
+          // Recreate the cron job with distributed locking
           const job = cron.schedule(scriptDoc.cronExpression, async () => {
+            const lockAcquired = await this.distributedLock.acquireLock(scriptDoc.scriptId, 300); // 5 minute lock
+            
+            if (!lockAcquired) {
+              console.log(`🚫 Script "${scriptDoc.scriptName}" already executing on another instance, skipping...`);
+              return;
+            }
+            
             try {
-              console.log(`⏰ Executing scheduled script: ${scriptDoc.scriptName}`);
+              console.log(`⏰ Executing scheduled script: ${scriptDoc.scriptName} (distributed lock acquired)`);
               this.cronStats.cronExecutions++;
               this.cronStats.lastCronExecution = new Date().toISOString();
               
@@ -1035,7 +1090,8 @@ class ScriptExecutionService {
                 trigger: 'cron',
                 scheduled: true,
                 executionTime: new Date().toISOString(),
-                cronExpression: scriptDoc.cronExpression
+                cronExpression: scriptDoc.cronExpression,
+                distributedExecution: true
               };
               
               const result = await this.executeScript(scriptDoc.script, cronPayload);
@@ -1044,6 +1100,9 @@ class ScriptExecutionService {
             } catch (error) {
               this.cronStats.failedCronExecutions++;
               console.error(`❌ Scheduled script "${scriptDoc.scriptName}" execution failed:`, error);
+            } finally {
+              // Always release the lock after execution
+              await this.distributedLock.releaseLock(scriptDoc.scriptId);
             }
           }, {
             scheduled: scriptDoc.isRunning // Start based on saved state
