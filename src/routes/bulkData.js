@@ -1,7 +1,6 @@
 const express = require('express');
 const multer = require('multer');
 const BulkDataService = require('../services/bulkDataService');
-const dbService = require('../services/database');
 
 const router = express.Router();
 
@@ -29,9 +28,6 @@ const upload = multer({
     }
   }
 });
-
-// Initialize bulk data service
-const bulkDataService = new BulkDataService(dbService);
 
 /**
  * @swagger
@@ -98,6 +94,7 @@ router.post('/:collection/preview', upload.single('file'), async (req, res) => {
       });
     }
 
+    const bulkDataService = new BulkDataService(req.app.locals.dbService);
     const preview = await bulkDataService.previewFile(req.file, previewRows);
 
     res.json({
@@ -187,6 +184,8 @@ router.post('/:collection/upload', upload.single('file'), async (req, res) => {
       });
     }
 
+    const bulkDataService = new BulkDataService(req.app.locals.dbService);
+    
     // Process the file
     const data = await bulkDataService.processFile(req.file);
 
