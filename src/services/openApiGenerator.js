@@ -46,10 +46,7 @@ class OpenApiGenerator {
           }
         ],
         tags: [
-          {
-            name: 'Collections',
-            description: 'CRUD operations for MongoDB collections with JSON and CSV export support'
-          },
+          ...this.generateCollectionTags(collections),
           {
             name: 'CSV Export',
             description: 'Export collection data in CSV format for analysis and reporting'
@@ -101,6 +98,16 @@ class OpenApiGenerator {
     };
 
     return spec;
+  }
+
+  /**
+   * Generate collection-specific tags
+   */
+  generateCollectionTags(collections) {
+    return collections.map(collection => ({
+      name: collection.name,
+      description: `CRUD operations for ${collection.name} collection with JSON and CSV export support`
+    }));
   }
 
   /**
@@ -1238,7 +1245,7 @@ class OpenApiGenerator {
       // Collection CRUD operations
       paths[`/api/db/${collectionName}`] = {
         get: {
-          tags: [collectionName, 'Collections', 'CSV Export'],
+          tags: [collectionName, 'CSV Export'],
           summary: `List ${collectionName} documents`,
           description: `Retrieve paginated list of documents from ${collectionName} collection with advanced filtering. 
 
@@ -1346,7 +1353,7 @@ class OpenApiGenerator {
           }
         },
         post: {
-          tags: [collectionName, 'Collections'],
+          tags: [collectionName],
           summary: `Create ${collectionName} document`,
           description: `Create a new document in the ${collectionName} collection`,
           requestBody: {
@@ -1375,7 +1382,7 @@ class OpenApiGenerator {
       // Individual document operations
       paths[`/api/db/${collectionName}/{id}`] = {
         get: {
-          tags: [collectionName, 'Collections'],
+          tags: [collectionName],
           summary: `Get ${collectionName} document by ID`,
           parameters: [
             {
@@ -1403,7 +1410,7 @@ class OpenApiGenerator {
           }
         },
         put: {
-          tags: [collectionName, 'Collections'],
+          tags: [collectionName],
           summary: `Update ${collectionName} document`,
           parameters: [
             {
@@ -1430,7 +1437,7 @@ class OpenApiGenerator {
           }
         },
         delete: {
-          tags: [collectionName, 'Collections'],
+          tags: [collectionName],
           summary: `Delete ${collectionName} document`,
           parameters: [
             {

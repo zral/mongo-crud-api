@@ -17,8 +17,12 @@ function App() {
         
         <header className="header">
           <div className="container">
-            <h1>MongoDB CRUD Manager</h1>
-            <p>Manage your MongoDB collections and data with ease</p>
+            <div className="header-content">
+              <div className="title-section">
+                <h1>MongoDB CRUD Manager</h1>
+                <p>Manage your MongoDB collections and data with ease</p>
+              </div>
+            </div>
           </div>
         </header>
 

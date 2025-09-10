@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { Plus, Trash2, Play, Edit, Pause, RotateCcw, Calendar, Clock } from 'lucide-react';
 
 const ScriptInterface = () => {
   const [scripts, setScripts] = useState([]);
@@ -505,6 +506,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
               cursor: 'pointer',
               marginRight: '20px'
             }}
+            title="Manage scripts that run on database events (create, update, delete)"
           >
             📝 Event Scripts
           </button>
@@ -520,40 +522,32 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
               fontWeight: '500',
               cursor: 'pointer'
             }}
+            title="Manage scripts that run on cron schedules (time-based automation)"
           >
             ⏰ Cron Schedules
           </button>
         </div>
 
         {/* Action Buttons */}
-        <div className="script-actions">
+        <div className="script-actions" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
           {activeTab === 'scripts' && (
             <>
               <button 
                 onClick={() => { resetForm(); setIsModalOpen(true); }}
-                style={{ 
-                  padding: '10px 20px', 
-                  backgroundColor: '#007bff', 
-                  color: 'white', 
-                  border: 'none', 
-                  borderRadius: '4px',
-                  marginRight: '10px'
-                }}
+                className="btn btn-primary"
                 disabled={loading}
+                title="Create a new event-driven script"
               >
+                <Plus size={16} />
                 Create New Script
               </button>
               <button 
                 onClick={clearRateLimits}
-                style={{ 
-                  padding: '10px 20px', 
-                  backgroundColor: '#ffc107', 
-                  color: '#212529', 
-                  border: 'none', 
-                  borderRadius: '4px'
-                }}
+                className="btn btn-warning"
                 disabled={loading}
+                title="Clear rate limiting counters for all scripts"
               >
+                <RotateCcw size={16} />
                 Clear Rate Limits
               </button>
             </>
@@ -562,29 +556,20 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
             <>
               <button 
                 onClick={() => { resetScheduleForm(); setIsScheduleModalOpen(true); }}
-                style={{ 
-                  padding: '10px 20px', 
-                  backgroundColor: '#28a745', 
-                  color: 'white', 
-                  border: 'none', 
-                  borderRadius: '4px',
-                  marginRight: '10px'
-                }}
+                className="btn btn-success"
                 disabled={loading}
+                title="Create a new cron-scheduled script"
               >
+                <Calendar size={16} />
                 Create New Schedule
               </button>
               <button 
                 onClick={resetCronStats}
-                style={{ 
-                  padding: '10px 20px', 
-                  backgroundColor: '#dc3545', 
-                  color: 'white', 
-                  border: 'none', 
-                  borderRadius: '4px'
-                }}
+                className="btn btn-danger"
                 disabled={loading}
+                title="Reset all cron execution statistics"
               >
+                <RotateCcw size={16} />
                 Reset Cron Stats
               </button>
             </>
@@ -838,45 +823,27 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                       </div>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => handleEdit(script)}
-                      style={{ 
-                        padding: '5px 10px', 
-                        backgroundColor: '#17a2b8', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '4px',
-                        fontSize: '12px'
-                      }}
+                      className="btn btn-secondary btn-sm"
+                      title="Edit script configuration and code"
                     >
-                      Edit
+                      <Edit size={14} />
                     </button>
                     <button
                       onClick={() => testScript(script)}
-                      style={{ 
-                        padding: '5px 10px', 
-                        backgroundColor: '#28a745', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '4px',
-                        fontSize: '12px'
-                      }}
+                      className="btn btn-success btn-sm"
+                      title="Test script execution with sample data"
                     >
-                      Test
+                      <Play size={14} />
                     </button>
                     <button
                       onClick={() => handleDelete(script._id)}
-                      style={{ 
-                        padding: '5px 10px', 
-                        backgroundColor: '#dc3545', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '4px',
-                        fontSize: '12px'
-                      }}
+                      className="btn btn-danger btn-sm"
+                      title="Delete this script permanently"
                     >
-                      Delete
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
@@ -995,85 +962,45 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                       <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                         <button
                           onClick={() => triggerScheduleManually(schedule.scriptName || schedule.name)}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: '#28a745',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
+                          className="btn btn-success btn-sm"
                           disabled={loading}
-                          title="Trigger manually"
+                          title="Run this schedule immediately"
                         >
-                          ▶️ Run
+                          <Play size={14} />
                         </button>
                         {schedule.isRunning ? (
                           <button
                             onClick={() => pauseSchedule(schedule.scriptName || schedule.name)}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#ffc107',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              cursor: 'pointer'
-                            }}
+                            className="btn btn-warning btn-sm"
                             disabled={loading}
-                            title="Pause schedule"
+                            title="Pause automatic execution of this schedule"
                           >
-                            ⏸️ Pause
+                            <Pause size={14} />
                           </button>
                         ) : (
                           <button
                             onClick={() => resumeSchedule(schedule.scriptName || schedule.name)}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#17a2b8',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              cursor: 'pointer'
-                            }}
+                            className="btn btn-info btn-sm"
                             disabled={loading}
-                            title="Resume schedule"
+                            title="Resume automatic execution of this schedule"
                           >
-                            ▶️ Resume
+                            <Play size={14} />
                           </button>
                         )}
                         <button
                           onClick={() => handleScheduleEdit(schedule)}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                          title="Edit schedule"
+                          className="btn btn-secondary btn-sm"
+                          title="Edit schedule configuration and code"
                         >
-                          ✏️ Edit
+                          <Edit size={14} />
                         </button>
                         <button
                           onClick={() => handleScheduleDelete(schedule.scriptName || schedule.name)}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
+                          className="btn btn-danger btn-sm"
                           disabled={loading}
-                          title="Delete schedule"
+                          title="Delete this schedule permanently"
                         >
-                          🗑️ Delete
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
@@ -1245,26 +1172,16 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                 <button 
                   type="button" 
                   onClick={resetScheduleForm}
-                  style={{ 
-                    padding: '10px 20px', 
-                    backgroundColor: '#6c757d', 
-                    color: 'white', 
-                    border: 'none', 
-                    borderRadius: '4px'
-                  }}
+                  className="btn btn-secondary"
+                  title="Cancel and close this form"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   disabled={loading}
-                  style={{ 
-                    padding: '10px 20px', 
-                    backgroundColor: '#28a745', 
-                    color: 'white', 
-                    border: 'none', 
-                    borderRadius: '4px'
-                  }}
+                  className="btn btn-primary"
+                  title={selectedSchedule ? "Save changes to this schedule" : "Create new cron schedule"}
                 >
                   {loading ? 'Saving...' : (selectedSchedule ? 'Update Schedule' : 'Create Schedule')}
                 </button>
@@ -1530,26 +1447,16 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                 <button 
                   type="button" 
                   onClick={resetForm}
-                  style={{ 
-                    padding: '10px 20px', 
-                    backgroundColor: '#6c757d', 
-                    color: 'white', 
-                    border: 'none', 
-                    borderRadius: '4px'
-                  }}
+                  className="btn btn-secondary"
+                  title="Cancel and close this form"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   disabled={loading}
-                  style={{ 
-                    padding: '10px 20px', 
-                    backgroundColor: '#007bff', 
-                    color: 'white', 
-                    border: 'none', 
-                    borderRadius: '4px'
-                  }}
+                  className="btn btn-primary"
+                  title={selectedScript ? "Save changes to this script" : "Create new event script"}
                 >
                   {loading ? 'Saving...' : (selectedScript ? 'Update Script' : 'Create Script')}
                 </button>

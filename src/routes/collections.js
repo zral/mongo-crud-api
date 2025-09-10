@@ -146,6 +146,7 @@ router.get('/:collection', validateCollectionName, async (req, res, next) => {
 router.get('/:collection/:id', validateCollectionName, async (req, res, next) => {
   try {
     const { collection, id } = req.params;
+    const dbService = req.app.locals.dbService;
 
     // Check if collection exists
     const exists = await dbService.collectionExists(collection);

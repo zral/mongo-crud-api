@@ -121,6 +121,7 @@ const ManagementInterface = () => {
             type="submit"
             className="btn btn-primary"
             disabled={isCreating || !newCollectionName.trim()}
+            title="Create a new MongoDB collection"
           >
             <Plus size={16} />
             {isCreating ? 'Creating...' : 'Create Collection'}
@@ -135,6 +136,7 @@ const ManagementInterface = () => {
             onClick={loadCollections}
             className="btn btn-secondary"
             disabled={loading}
+            title="Refresh the list of collections"
           >
             <RefreshCw size={16} />
             Refresh
@@ -158,7 +160,7 @@ const ManagementInterface = () => {
                       handleDropCollection(collection.name);
                     }}
                     className="btn btn-danger"
-                    title={`Drop ${collection.name}`}
+                    title={`Drop collection '${collection.name}' permanently (this cannot be undone)`}
                   >
                     <Trash2 size={16} />
                   </button>

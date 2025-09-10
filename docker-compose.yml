@@ -59,6 +59,7 @@ services:
       CLUSTER_ENABLED: true
       INSTANCE_ID: api-1
       CRON_ENABLED: true
+      OPENAPI_BASE_URL: http://localhost:8080
     ports:
       - "3001:3001"
     depends_on:
@@ -97,6 +98,7 @@ services:
       CLUSTER_ENABLED: true
       INSTANCE_ID: api-2
       CRON_ENABLED: false
+      OPENAPI_BASE_URL: http://localhost:8080
     ports:
       - "3002:3002"
     depends_on:
@@ -135,6 +137,7 @@ services:
       CLUSTER_ENABLED: true
       INSTANCE_ID: api-3
       CRON_ENABLED: false
+      OPENAPI_BASE_URL: http://localhost:8080
     ports:
       - "3003:3003"
     depends_on:
