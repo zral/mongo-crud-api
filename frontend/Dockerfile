@@ -3,6 +3,10 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Accept build argument for API URL
+ARG REACT_APP_API_URL=http://crud-api.local
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+
 # Copy package files
 COPY package*.json ./
 
@@ -34,5 +38,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
 
-# Start the application
-CMD ["serve", "-s", "build", "-l", "3000"]
+# Start the application with base path support
+CMD ["serve", "-s", "build", "-l", "3000", "--single"]
