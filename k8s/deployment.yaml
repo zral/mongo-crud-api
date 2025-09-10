@@ -24,7 +24,7 @@ data:
   API_REQUEST_BODY_LIMIT: "10mb"
   OPENAPI_TITLE: "MongoDB CRUD API"
   OPENAPI_VERSION: "1.0.0"
-  OPENAPI_BASE_URL: "http://crud-api.local"
+  OPENAPI_BASE_URL: "http://localhost:30080"
   SCRIPT_API_BASE_URL: "http://crud-api-service:80"
   CLUSTER_ENABLE_DISTRIBUTED_LOCKING: "true"
   CLUSTER_CRON_LEADER_ELECTION: "true"
@@ -452,7 +452,7 @@ spec:
         - containerPort: 3000
         env:
         - name: REACT_APP_API_URL
-          value: "http://crud-api.local"
+          value: "http://localhost:30080"
         resources:
           requests:
             memory: "128Mi"
