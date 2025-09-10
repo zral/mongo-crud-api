@@ -2,14 +2,24 @@ const Redis = require('ioredis');
 
 class RedisDistributedLock {
   constructor(redisConfig = {}) {
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
+    // Use REDIS_URL if available, otherwise fall back to individual host/port
+    const redisUrl = process.env.REDIS_URL;
+    let redisOptions = {
       retryDelayOnFailover: 100,
       enableReadyCheck: false,
       maxRetriesPerRequest: null,
       ...redisConfig
-    });
+    };
+
+    if (redisUrl) {
+      this.redis = new Redis(redisUrl, redisOptions);
+    } else {
+      this.redis = new Redis({
+        host: process.env.REDIS_HOST || 'localhost',
+        port: process.env.REDIS_PORT || 6379,
+        ...redisOptions
+      });
+    }
 
     this.lockPrefix = 'cron_lock:';
     this.instanceId = process.env.INSTANCE_ID || `instance_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

@@ -12,10 +12,7 @@ class ScriptExecutionService {
     this.db = null;
     
     // Redis distributed lock for cron coordination
-    this.distributedLock = new RedisDistributedLock({
-      host: process.env.REDIS_HOST || 'redis',
-      port: process.env.REDIS_PORT || 6379
-    });
+    this.distributedLock = new RedisDistributedLock();
     
     // Rate limiting: Map of script IDs to their last execution times and counts
     this.rateLimitMap = new Map();

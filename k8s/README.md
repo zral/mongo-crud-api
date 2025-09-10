@@ -281,16 +281,43 @@ kubectl exec -n mongodb-crud $LEADER_POD -- curl -X POST http://localhost:3000/a
 
 ### Common Issues
 
-1. **Redis Connection Issues**
-   ```bash
-   # Check Redis pod
-   kubectl logs -n mongodb-crud deployment/redis
+1. **Redis Connection Issues** ⚠️ **RESOLVED**
    
-   # Test Redis connectivity
-   kubectl exec -n mongodb-crud $POD_NAME -- redis-cli -h redis ping
+   **Symptoms**: "Connection is closed" errors in API logs, script execution failures
+   
+   **Root Cause**: RedisDistributedLock service was using REDIS_HOST/REDIS_PORT instead of REDIS_URL
+   
+   **Solution Applied**: Updated RedisDistributedLock to properly use REDIS_URL configuration
+   
+   ```bash
+   # Verify Redis connectivity (should now work)
+   kubectl exec -n mongodb-crud deployment/crud-api -- node -e "
+   const Redis = require('ioredis');
+   const redis = new Redis(process.env.REDIS_URL);
+   redis.ping().then(console.log).catch(console.error).finally(() => process.exit());
+   "
+   
+   # Check distributed locking is working
+   kubectl logs -n mongodb-crud deployment/crud-api | grep -E "(Lock|lock|✅|🔒|🔓)"
+   
+   # Test scheduled script execution
+   curl -H "Host: crud-api.local" -H "Content-Type: application/json" \
+        -X POST http://localhost/api/scripts/scheduled/cronRun/trigger
    ```
 
-2. **Leadership Not Working**
+2. **Script Execution Coordination** ✅ **WORKING**
+   
+   **Expected Behavior**: Only one instance executes scheduled scripts, others skip with "already executing" message
+   
+   ```bash
+   # Check distributed script execution
+   kubectl logs -n mongodb-crud deployment/crud-api --tail=20 | grep -E "(cronRun|testScheduledScript|🚫|✅)"
+   
+   # View scheduled scripts status
+   curl -H "Host: crud-api.local" http://localhost/api/scripts/scheduled/list
+   ```
+
+3. **Leadership Not Working**
    ```bash
    # Check leader election logs
    kubectl logs -n mongodb-crud deployment/crud-api | grep -i leader
