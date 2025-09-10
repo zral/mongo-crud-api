@@ -11,10 +11,18 @@ This project creates a comprehensive Node.js REST API that dynamically exposes a
 - Manual script triggers for testing and debugging
 - Multi-instance deployment with Redis coordination
 - React frontend with comprehensive management interface
-- TypeScript SDK generation and OpenAPI documentation
+- Collection-specific OpenAPI documentation sections
+- TypeScript SDK generation and interactive Swagger docs
 - Docker containerization with minimal base images
 - Docker Compose orchestration
 - Comprehensive test scripts and documentation
+
+## Recent Improvements
+- [x] Frontend UI enhancements with standardized styling and tooltips
+- [x] Collection-specific Swagger documentation organization
+- [x] Fixed critical API bugs and improved error handling
+- [x] Enhanced OpenAPI configuration with proper server URLs
+- [x] Cleaned up unused assets and streamlined interface
 
 ## Progress
 - [x] Project structure created
@@ -26,5 +34,7 @@ This project creates a comprehensive Node.js REST API that dynamically exposes a
 - [x] Manual trigger functionality implemented
 - [x] Multi-instance scalability implemented
 - [x] React frontend implemented
+- [x] Collection-specific API documentation implemented
+- [x] UI/UX improvements and bug fixes completed
 - [x] Test scripts created
 - [x] Comprehensive documentation completed

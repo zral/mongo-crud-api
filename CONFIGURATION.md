@@ -64,13 +64,14 @@ CSV_QUOTE_CHAR="              # CSV quote character
 ```
 
 ### OpenAPI Configuration
-Controls API documentation generation.
+Controls API documentation generation and server URLs.
 
 ```bash
 # Basic Info
 OPENAPI_TITLE=MongoDB CRUD REST API
 OPENAPI_VERSION=1.0.0
-OPENAPI_BASE_URL=http://localhost:8080
+OPENAPI_DESCRIPTION=Dynamic MongoDB CRUD API with collections
+OPENAPI_BASE_URL=http://localhost:8080    # Public API URL
 
 # Contact Information
 OPENAPI_CONTACT_NAME=API Support
@@ -80,7 +81,15 @@ OPENAPI_CONTACT_URL=https://support.example.com
 # License
 OPENAPI_LICENSE_NAME=MIT
 OPENAPI_LICENSE_URL=https://opensource.org/licenses/MIT
+
+# Server Description
+OPENAPI_SERVER_DESCRIPTION=API Server
+
+# Additional Servers (JSON array)
+OPENAPI_ADDITIONAL_SERVERS='[{"url":"https://api.example.com","description":"Production"}]'
 ```
+
+**Important**: The `OPENAPI_BASE_URL` should match your external API URL for correct Swagger documentation URLs.
 
 ### Webhook Configuration
 Controls webhook delivery behavior.

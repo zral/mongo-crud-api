@@ -45,9 +45,11 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 - **Schedule Overview**: View all active schedules with next execution times
 - **Flexible Timing**: From every minute to complex yearly schedules
 
-### **SDK Generation & Documentation**
+### **Enhanced Documentation & API**
+- **Collection-Specific Swagger Sections**: Each collection gets its own organized section in the API documentation
+- **Interactive OpenAPI Explorer**: Complete API documentation with live testing capabilities
 - **TypeScript SDK Generation**: Auto-generated type-safe client libraries
-- **OpenAPI/Swagger Specification**: Complete API documentation with interactive explorer
+- **Comprehensive Error Handling**: Detailed error responses with proper HTTP status codes
 - **Schema Discovery**: Intelligent schema inference from existing data
 - **Multi-Language Support**: Ready for SDK generation in any language supporting OpenAPI
 - **Interactive Documentation**: Swagger UI at `/api/sdk/docs` with live API testing
