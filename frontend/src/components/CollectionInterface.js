@@ -158,7 +158,7 @@ const CollectionInterface = () => {
       if (Array.isArray(value)) {
         return `[${value.length} items]`;
       }
-      return key === '_id' ? String(value) : '{object}';
+      return '{object}';
     }
     if (typeof value === 'string' && value.length > 50) {
       return value.substring(0, 50) + '...';
@@ -174,14 +174,10 @@ const CollectionInterface = () => {
       Object.keys(doc).forEach(key => allKeys.add(key));
     });
     
-    // Put _id first, then sort the rest
-    const sortedKeys = Array.from(allKeys).sort((a, b) => {
-      if (a === '_id') return -1;
-      if (b === '_id') return 1;
-      return a.localeCompare(b);
-    });
+    // Remove _id from the keys and sort the rest
+    const filteredKeys = Array.from(allKeys).filter(key => key !== '_id').sort();
     
-    return sortedKeys.slice(0, 6); // Limit to 6 columns for better display
+    return filteredKeys.slice(0, 6); // Limit to 6 columns for better display
   };
 
   return (
