@@ -518,9 +518,21 @@ class DatabaseService {
   // Helper methods
   toObjectId(id) {
     try {
-      return new ObjectId(id);
+      // If it's already an ObjectId, return it
+      if (id instanceof ObjectId) {
+        return id;
+      }
+      
+      // If it's a valid ObjectId string (24 hex characters), convert it
+      if (typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id)) {
+        return new ObjectId(id);
+      }
+      
+      // Otherwise, return the string as-is for custom string IDs
+      return id;
     } catch (error) {
-      throw new Error(`Invalid ObjectId format: ${id}`);
+      // If ObjectId conversion fails, return the original value
+      return id;
     }
   }
 

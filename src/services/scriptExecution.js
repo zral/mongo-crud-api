@@ -977,8 +977,11 @@ class ScriptExecutionService {
       if (!this.db) return;
       
       const collection = this.getScheduledScriptsCollection();
+      
+      // Check if document already exists with this scriptId
+      const existingDoc = await collection.findOne({ scriptId });
+      
       const doc = {
-        _id: scriptId,
         scriptId,
         scriptName: script.name,
         scriptCode: script.code,
@@ -986,16 +989,21 @@ class ScriptExecutionService {
         cronExpression,
         payload,
         isRunning: true,
-        createdAt: new Date(),
+        createdAt: existingDoc ? existingDoc.createdAt : new Date(),
         updatedAt: new Date(),
         lastExecution: null
       };
       
-      await collection.replaceOne(
-        { _id: scriptId },
-        doc,
-        { upsert: true }
-      );
+      if (existingDoc) {
+        // Update existing document, preserving the ObjectId
+        await collection.replaceOne(
+          { _id: existingDoc._id },
+          { ...doc, _id: existingDoc._id }
+        );
+      } else {
+        // Insert new document with auto-generated ObjectId
+        await collection.insertOne(doc);
+      }
       
       console.log(`💾 Persisted scheduled script: ${scriptId}`);
     } catch (error) {

@@ -639,11 +639,90 @@ class EnhancedScriptExecutionService extends EventEmitter {
     };
   }
 
-  // Placeholder methods - implement with actual database operations
-  async getEventScripts(collection, event) { return []; }
-  async persistScheduledScript(scriptId, cronExpression, scriptCode, options) { }
-  async removeScheduledScriptFromDB(scriptId) { }
-  async updateLastExecution(scriptId, executionId, success, error = null) { }
+  // Database operations for scheduled scripts
+  async getEventScripts(collection, event) { 
+    try {
+      const scripts = await this.databaseService.getCollection('_scripts')
+        .find({ 
+          $or: [
+            { collection: collection },
+            { collection: '' } // Global scripts
+          ],
+          events: event,
+          enabled: true 
+        }).toArray();
+      return scripts;
+    } catch (error) {
+      console.error('Error getting event scripts:', error);
+      return [];
+    }
+  }
+  
+  async persistScheduledScript(scriptId, cronExpression, scriptCode, options) { 
+    try {
+      const collection = this.databaseService.getCollection('_scheduled_scripts');
+      
+      // Check if document already exists with this scriptId
+      const existingDoc = await collection.findOne({ scriptId });
+      
+      const doc = {
+        scriptId,
+        scriptName: options.scriptName || scriptId,
+        scriptCode,
+        cronExpression,
+        scriptOptions: options,
+        isActive: true,
+        createdAt: existingDoc ? existingDoc.createdAt : new Date(),
+        updatedAt: new Date(),
+        lastExecution: null
+      };
+      
+      if (existingDoc) {
+        // Update existing document, preserving the ObjectId
+        await collection.replaceOne(
+          { _id: existingDoc._id },
+          { ...doc, _id: existingDoc._id }
+        );
+      } else {
+        // Insert new document with auto-generated ObjectId
+        await collection.insertOne(doc);
+      }
+      
+      console.log(`💾 Enhanced: Persisted scheduled script: ${scriptId}`);
+    } catch (error) {
+      console.error(`❌ Enhanced: Failed to persist scheduled script ${scriptId}:`, error);
+    }
+  }
+  
+  async removeScheduledScriptFromDB(scriptId) { 
+    try {
+      const collection = this.databaseService.getCollection('_scheduled_scripts');
+      await collection.deleteOne({ scriptId });
+      console.log(`🗑️ Enhanced: Removed scheduled script from DB: ${scriptId}`);
+    } catch (error) {
+      console.error(`❌ Enhanced: Failed to remove scheduled script ${scriptId}:`, error);
+    }
+  }
+  
+  async updateLastExecution(scriptId, executionId, success, error = null) { 
+    try {
+      const collection = this.databaseService.getCollection('_scheduled_scripts');
+      await collection.updateOne(
+        { scriptId },
+        { 
+          $set: { 
+            lastExecution: new Date(),
+            lastExecutionId: executionId,
+            lastExecutionSuccess: success,
+            lastExecutionError: error,
+            updatedAt: new Date()
+          }
+        }
+      );
+    } catch (error) {
+      console.error(`❌ Enhanced: Failed to update last execution for ${scriptId}:`, error);
+    }
+  }
 }
 
 module.exports = EnhancedScriptExecutionService;
