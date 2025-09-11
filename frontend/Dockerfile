@@ -4,7 +4,7 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 # Accept build argument for API URL
-ARG REACT_APP_API_URL=http://crud-api.local
+ARG REACT_APP_API_URL=http://localhost:30080
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 # Copy package files
