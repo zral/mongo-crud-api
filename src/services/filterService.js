@@ -46,7 +46,8 @@ class FilterService {
     // Handle JSON filter syntax
     if (value.startsWith('{') && value.endsWith('}')) {
       try {
-        return JSON.parse(value);
+        const parsed = JSON.parse(value);
+        return this.processFilterObject(parsed);
       } catch (error) {
         // If JSON parsing fails, treat as string
         return value;
@@ -56,7 +57,8 @@ class FilterService {
     // Handle MongoDB operators in string format
     if (value.startsWith('$')) {
       try {
-        return JSON.parse(value);
+        const parsed = JSON.parse(value);
+        return this.processFilterObject(parsed);
       } catch (error) {
         return value;
       }
@@ -111,6 +113,31 @@ class FilterService {
   }
   
   /**
+   * Process a filter object recursively to parse values
+   */
+  static processFilterObject(obj) {
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.processFilterObject(item));
+    }
+    
+    if (obj && typeof obj === 'object') {
+      const processed = {};
+      Object.entries(obj).forEach(([key, value]) => {
+        if (typeof value === 'string') {
+          processed[key] = this.parseValue(value);
+        } else if (typeof value === 'object') {
+          processed[key] = this.processFilterObject(value);
+        } else {
+          processed[key] = value;
+        }
+      });
+      return processed;
+    }
+    
+    return obj;
+  }
+
+  /**
    * Parse string value to appropriate type
    */
   static parseValue(value) {
@@ -133,13 +160,13 @@ class FilterService {
       return parseFloat(value);
     }
     
-    // Date values (ISO format)
-    if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
-      const date = new Date(value);
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-    }
+    // Date values (ISO format) - temporarily disabled
+    // if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+    //   const date = new Date(value);
+    //   if (!isNaN(date.getTime())) {
+    //     return date;
+    //   }
+    // }
     
     // MongoDB ObjectId
     if (/^[a-fA-F0-9]{24}$/.test(value)) {
