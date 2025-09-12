@@ -319,7 +319,7 @@ class DatabaseService {
   }
 
     // CRUD operations
-  async findDocuments(collectionName, filter = {}, options = {}) {
+  async findDocuments(collectionName, filter = {}, options = {}, originalQueryParams = {}) {
     try {
       const collection = this.db.collection(collectionName);
       const { 
@@ -373,8 +373,97 @@ class DatabaseService {
         const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
         const skip = (pageNum - 1) * limitNum;
 
+        // Debug logging for filter issues
+        if (Object.keys(filter).length > 0) {
+          console.log('=== DATABASE QUERY DEBUG ===');
+          console.log('Collection:', collectionName);
+          console.log('Filter:', JSON.stringify(filter, null, 2));
+          console.log('============================');
+        }
+
+        // Convert date strings to Date objects for MongoDB queries
+        const convertDatesInFilter = (obj) => {
+          if (Array.isArray(obj)) {
+            return obj.map(convertDatesInFilter);
+          }
+          if (obj && typeof obj === 'object') {
+            const converted = {};
+            Object.entries(obj).forEach(([key, value]) => {
+              if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/.test(value)) {
+                // Convert ISO date strings to Date objects
+                console.log(`Converting date string ${value} to Date object`);
+                converted[key] = new Date(value);
+              } else if (typeof value === 'object') {
+                converted[key] = convertDatesInFilter(value);
+              } else {
+                converted[key] = value;
+              }
+            });
+            return converted;
+          }
+          return obj;
+        };
+
+        // Handle any date filters that became empty objects
+        let mongoFilter = filter;
+        const dateOps = ['$lt', '$lte', '$gt', '$gte'];
+        let hasEmptyDateOp = false;
+        let reconstructed = {};
+        
+        // Check all filter fields for empty date operators
+        Object.entries(filter).forEach(([fieldName, fieldFilter]) => {
+          if (fieldFilter && typeof fieldFilter === 'object') {
+            const fieldHasEmptyDateOp = dateOps.some(op => 
+              fieldFilter[op] && 
+              typeof fieldFilter[op] === 'object' && 
+              Object.keys(fieldFilter[op]).length === 0
+            );
+            
+            if (fieldHasEmptyDateOp) {
+              hasEmptyDateOp = true;
+              // Try to reconstruct this field's date filter
+              const originalFilter = originalQueryParams[fieldName];
+              if (originalFilter && typeof originalFilter === 'string') {
+                try {
+                  const parsed = JSON.parse(originalFilter);
+                  reconstructed[fieldName] = {};
+                  
+                  // Reconstruct all date operators for this field
+                  dateOps.forEach(op => {
+                    if (parsed[op] && typeof parsed[op] === 'string') {
+                      reconstructed[fieldName][op] = new Date(parsed[op]);
+                    }
+                  });
+                } catch (e) {
+                  console.log(`Failed to parse original filter for ${fieldName}:`, e.message);
+                  reconstructed[fieldName] = fieldFilter;
+                }
+              } else {
+                reconstructed[fieldName] = fieldFilter;
+              }
+            } else {
+              reconstructed[fieldName] = fieldFilter;
+            }
+          } else {
+            reconstructed[fieldName] = fieldFilter;
+          }
+        });
+        
+        if (hasEmptyDateOp) {
+          mongoFilter = reconstructed;
+        } else {
+          mongoFilter = convertDatesInFilter(filter);
+        }
+
+        // Debug the converted filter
+        if (Object.keys(filter).length > 0) {
+          console.log('=== MONGODB FILTER ===');
+          console.log('MongoDB Filter:', JSON.stringify(mongoFilter, null, 2));
+          console.log('======================');
+        }
+
         // Build query with projection
-        let query = collection.find(filter);
+        let query = collection.find(mongoFilter);
         
         // Apply field projection if specified
         if (fields && Object.keys(fields).length > 0) {
@@ -396,7 +485,7 @@ class DatabaseService {
         }
 
         documents = await query.toArray();
-        total = await collection.countDocuments(filter);
+        total = await collection.countDocuments(mongoFilter);
 
         return {
           data: documents,
@@ -518,21 +607,9 @@ class DatabaseService {
   // Helper methods
   toObjectId(id) {
     try {
-      // If it's already an ObjectId, return it
-      if (id instanceof ObjectId) {
-        return id;
-      }
-      
-      // If it's a valid ObjectId string (24 hex characters), convert it
-      if (typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id)) {
-        return new ObjectId(id);
-      }
-      
-      // Otherwise, return the string as-is for custom string IDs
-      return id;
+      return new ObjectId(id);
     } catch (error) {
-      // If ObjectId conversion fails, return the original value
-      return id;
+      throw new Error(`Invalid ObjectId format: ${id}`);
     }
   }
 

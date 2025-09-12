@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MongoDB CRUD API - Enterprise Backend with Collection-Specific Documentation</title>
+    <title>MongoDB CRUD API - Enterprise Backend with JavaScript Automation</title>
     <style>
         * {
             margin: 0;
@@ -209,7 +209,7 @@
                 <div class="feature-card">
                     <div class="feature-icon">🔍</div>
                     <h3>Advanced Filtering</h3>
-                    <p>MongoDB-style queries with complex conditions, range queries, text search, field projection, and intelligent schema discovery.</p>
+                    <p>MongoDB-style queries with complex conditions, range queries, date filtering (createdAt[$gte]=2024-01-01), text search, field projection, and intelligent schema discovery.</p>
                 </div>
 
                 <div class="feature-card">
@@ -340,6 +340,55 @@ GET    /api/management/collections  # Collections
 GET    /api/sdk/openapi.json       # OpenAPI spec
 GET    /api/sdk/typescript         # TypeScript SDK
 GET    /api/sdk/docs              # Swagger UI</pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">🔍 Advanced Query Examples</h2>
+            <div style="max-width: 1000px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 30px;">
+                    <div>
+                        <h3 style="color: #2c3e50; margin-bottom: 15px;">📅 Date Filtering</h3>
+                        <pre style="background: #f8f9fa; padding: 20px; border-radius: 8px; font-size: 13px; overflow-x: auto; border-left: 4px solid #3498db;">
+# Recent products (last 30 days)
+GET /api/db/products?createdAt[$gte]=2024-01-01
+
+# Date range filtering  
+GET /api/db/orders?orderDate[$gte]=2024-01-01&orderDate[$lte]=2024-01-31
+
+# Before specific date
+GET /api/db/users?registeredAt[$lt]=2024-06-01T00:00:00.000Z
+
+# Multiple date conditions
+GET /api/db/events?startDate[$gte]=2024-01-01&endDate[$lte]=2024-12-31</pre>
+                    </div>
+                    <div>
+                        <h3 style="color: #2c3e50; margin-bottom: 15px;">🔎 Complex Filtering</h3>
+                        <pre style="background: #f8f9fa; padding: 20px; border-radius: 8px; font-size: 13px; overflow-x: auto; border-left: 4px solid #e74c3c;">
+# Field equality and sorting
+GET /api/db/products?category=electronics&sort=price
+
+# Pagination with filtering
+GET /api/db/users?status=active&page=2&limit=10
+
+# Multiple field conditions
+GET /api/db/orders?status=completed&amount[$gte]=100&customerId=123
+
+# Text search with filtering
+GET /api/db/products?name=laptop&category=computers&inStock=true</pre>
+                    </div>
+                </div>
+                <div style="margin-top: 25px; padding: 20px; background: #e8f5e8; border-radius: 8px; border-left: 4px solid #28a745;">
+                    <h4 style="color: #155724; margin-bottom: 10px;">💡 Date Filtering Pro Tips</h4>
+                    <ul style="color: #155724; font-size: 14px; margin: 0; padding-left: 20px;">
+                        <li>Use ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ</li>
+                        <li>Supported operators: $gt, $gte, $lt, $lte for date comparisons</li>
+                        <li>Date fields are automatically detected and converted to MongoDB ISODate</li>
+                        <li>Combine date filtering with other query parameters for complex searches</li>
+                    </ul>
                 </div>
             </div>
         </div>

@@ -124,7 +124,13 @@ class FilterService {
       const processed = {};
       Object.entries(obj).forEach(([key, value]) => {
         if (typeof value === 'string') {
-          processed[key] = this.parseValue(value);
+          // For date-related operations, convert strings to Date objects for proper comparison
+          // with ISODate objects stored in MongoDB
+          if (this.isDateOperator(key)) {
+            processed[key] = this.parseValue(value); // Convert to Date object for date comparison
+          } else {
+            processed[key] = this.parseValue(value);
+          }
         } else if (typeof value === 'object') {
           processed[key] = this.processFilterObject(value);
         } else {
@@ -135,6 +141,14 @@ class FilterService {
     }
     
     return obj;
+  }
+
+  /**
+   * Check if a key is a date comparison operator
+   */
+  static isDateOperator(key) {
+    const dateOperators = ['$lt', '$lte', '$gt', '$gte'];
+    return dateOperators.includes(key);
   }
 
   /**
@@ -160,13 +174,13 @@ class FilterService {
       return parseFloat(value);
     }
     
-    // Date values (ISO format) - temporarily disabled
-    // if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
-    //   const date = new Date(value);
-    //   if (!isNaN(date.getTime())) {
-    //     return date;
-    //   }
-    // }
+    // Date values (ISO format)
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
     
     // MongoDB ObjectId
     if (/^[a-fA-F0-9]{24}$/.test(value)) {
@@ -212,16 +226,35 @@ class FilterService {
       return {};
     }
     
-    // Remove potentially dangerous operators
+    // Remove potentially dangerous operators while preserving Date objects
     const dangerousOps = ['$where', '$eval'];
-    const sanitized = JSON.parse(JSON.stringify(filter));
+    
+    // Deep clone the filter while preserving Date objects
+    const cloneWithDates = (obj) => {
+      if (obj instanceof Date) {
+        return new Date(obj);
+      }
+      if (Array.isArray(obj)) {
+        return obj.map(cloneWithDates);
+      }
+      if (obj && typeof obj === 'object') {
+        const cloned = {};
+        Object.entries(obj).forEach(([key, value]) => {
+          cloned[key] = cloneWithDates(value);
+        });
+        return cloned;
+      }
+      return obj;
+    };
+    
+    const sanitized = cloneWithDates(filter);
     
     const removeDangerous = (obj) => {
       if (Array.isArray(obj)) {
         return obj.map(removeDangerous);
       }
       
-      if (obj && typeof obj === 'object') {
+      if (obj && typeof obj === 'object' && !(obj instanceof Date)) {
         Object.keys(obj).forEach(key => {
           if (dangerousOps.includes(key)) {
             delete obj[key];
@@ -256,6 +289,9 @@ class FilterService {
         filter = textFilter;
       }
     }
+    
+    // Process the final filter to convert date strings to Date objects
+    filter = this.processFilterObject(filter);
     
     return this.validateFilter(filter);
   }

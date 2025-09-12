@@ -12,7 +12,10 @@ class ScriptExecutionService {
     this.db = null;
     
     // Redis distributed lock for cron coordination
-    this.distributedLock = new RedisDistributedLock();
+    this.distributedLock = new RedisDistributedLock({
+      host: process.env.REDIS_HOST || 'redis',
+      port: process.env.REDIS_PORT || 6379
+    });
     
     // Rate limiting: Map of script IDs to their last execution times and counts
     this.rateLimitMap = new Map();
@@ -977,11 +980,8 @@ class ScriptExecutionService {
       if (!this.db) return;
       
       const collection = this.getScheduledScriptsCollection();
-      
-      // Check if document already exists with this scriptId
-      const existingDoc = await collection.findOne({ scriptId });
-      
       const doc = {
+        _id: scriptId,
         scriptId,
         scriptName: script.name,
         scriptCode: script.code,
@@ -989,21 +989,16 @@ class ScriptExecutionService {
         cronExpression,
         payload,
         isRunning: true,
-        createdAt: existingDoc ? existingDoc.createdAt : new Date(),
+        createdAt: new Date(),
         updatedAt: new Date(),
         lastExecution: null
       };
       
-      if (existingDoc) {
-        // Update existing document, preserving the ObjectId
-        await collection.replaceOne(
-          { _id: existingDoc._id },
-          { ...doc, _id: existingDoc._id }
-        );
-      } else {
-        // Insert new document with auto-generated ObjectId
-        await collection.insertOne(doc);
-      }
+      await collection.replaceOne(
+        { _id: scriptId },
+        doc,
+        { upsert: true }
+      );
       
       console.log(`💾 Persisted scheduled script: ${scriptId}`);
     } catch (error) {

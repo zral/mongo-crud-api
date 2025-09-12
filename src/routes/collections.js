@@ -46,6 +46,15 @@ router.get('/:collection', validateCollectionName, async (req, res, next) => {
     // Build comprehensive filter from query parameters
     const filter = FilterService.buildCollectionFilter(queryParams);
     
+    // Debug logging for filter issues
+    if (Object.keys(filter).length > 0) {
+      console.log('=== FILTER DEBUG ===');
+      console.log('Query params:', JSON.stringify(queryParams, null, 2));
+      console.log('Parsed filter:', JSON.stringify(filter, null, 2));
+      console.log('Filter types:', Object.entries(filter).map(([k, v]) => [k, typeof v, v?.constructor?.name]));
+      console.log('==================');
+    }
+    
     // Parse field selection for projection
     const projection = FilterService.parseFieldSelection(fields);
 
@@ -61,7 +70,7 @@ router.get('/:collection', validateCollectionName, async (req, res, next) => {
       fields: projection
     };
 
-    const result = await dbService.findDocuments(collection, filter, options);
+    const result = await dbService.findDocuments(collection, filter, options, queryParams);
     
     if (requestsCSV) {
       // Check CSV export limits
@@ -146,7 +155,6 @@ router.get('/:collection', validateCollectionName, async (req, res, next) => {
 router.get('/:collection/:id', validateCollectionName, async (req, res, next) => {
   try {
     const { collection, id } = req.params;
-    const dbService = req.app.locals.dbService;
 
     // Check if collection exists
     const exists = await dbService.collectionExists(collection);

@@ -506,7 +506,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
               cursor: 'pointer',
               marginRight: '20px'
             }}
-            title="Manage scripts that run on database events (create, update, delete)"
           >
             📝 Event Scripts
           </button>
@@ -522,7 +521,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
               fontWeight: '500',
               cursor: 'pointer'
             }}
-            title="Manage scripts that run on cron schedules (time-based automation)"
           >
             ⏰ Cron Schedules
           </button>
@@ -536,7 +534,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                 onClick={() => { resetForm(); setIsModalOpen(true); }}
                 className="btn btn-primary"
                 disabled={loading}
-                title="Create a new event-driven script"
               >
                 <Plus size={16} />
                 Create New Script
@@ -545,7 +542,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                 onClick={clearRateLimits}
                 className="btn btn-warning"
                 disabled={loading}
-                title="Clear rate limiting counters for all scripts"
               >
                 <RotateCcw size={16} />
                 Clear Rate Limits
@@ -558,7 +554,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                 onClick={() => { resetScheduleForm(); setIsScheduleModalOpen(true); }}
                 className="btn btn-success"
                 disabled={loading}
-                title="Create a new cron-scheduled script"
               >
                 <Calendar size={16} />
                 Create New Schedule
@@ -567,7 +562,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                 onClick={resetCronStats}
                 className="btn btn-danger"
                 disabled={loading}
-                title="Reset all cron execution statistics"
               >
                 <RotateCcw size={16} />
                 Reset Cron Stats
@@ -827,21 +821,21 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                     <button
                       onClick={() => handleEdit(script)}
                       className="btn btn-secondary btn-sm"
-                      title="Edit script configuration and code"
+                      title="Edit script"
                     >
                       <Edit size={14} />
                     </button>
                     <button
                       onClick={() => testScript(script)}
                       className="btn btn-success btn-sm"
-                      title="Test script execution with sample data"
+                      title="Test script"
                     >
                       <Play size={14} />
                     </button>
                     <button
                       onClick={() => handleDelete(script._id)}
                       className="btn btn-danger btn-sm"
-                      title="Delete this script permanently"
+                      title="Delete script"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -964,7 +958,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                           onClick={() => triggerScheduleManually(schedule.scriptName || schedule.name)}
                           className="btn btn-success btn-sm"
                           disabled={loading}
-                          title="Run this schedule immediately"
+                          title="Trigger manually"
                         >
                           <Play size={14} />
                         </button>
@@ -973,7 +967,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                             onClick={() => pauseSchedule(schedule.scriptName || schedule.name)}
                             className="btn btn-warning btn-sm"
                             disabled={loading}
-                            title="Pause automatic execution of this schedule"
+                            title="Pause schedule"
                           >
                             <Pause size={14} />
                           </button>
@@ -982,7 +976,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                             onClick={() => resumeSchedule(schedule.scriptName || schedule.name)}
                             className="btn btn-info btn-sm"
                             disabled={loading}
-                            title="Resume automatic execution of this schedule"
+                            title="Resume schedule"
                           >
                             <Play size={14} />
                           </button>
@@ -990,7 +984,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                         <button
                           onClick={() => handleScheduleEdit(schedule)}
                           className="btn btn-secondary btn-sm"
-                          title="Edit schedule configuration and code"
+                          title="Edit schedule"
                         >
                           <Edit size={14} />
                         </button>
@@ -998,7 +992,7 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                           onClick={() => handleScheduleDelete(schedule.scriptName || schedule.name)}
                           className="btn btn-danger btn-sm"
                           disabled={loading}
-                          title="Delete this schedule permanently"
+                          title="Delete schedule"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -1173,7 +1167,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                   type="button" 
                   onClick={resetScheduleForm}
                   className="btn btn-secondary"
-                  title="Cancel and close this form"
                 >
                   Cancel
                 </button>
@@ -1181,7 +1174,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                   type="submit" 
                   disabled={loading}
                   className="btn btn-primary"
-                  title={selectedSchedule ? "Save changes to this schedule" : "Create new cron schedule"}
                 >
                   {loading ? 'Saving...' : (selectedSchedule ? 'Update Schedule' : 'Create Schedule')}
                 </button>
@@ -1448,7 +1440,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                   type="button" 
                   onClick={resetForm}
                   className="btn btn-secondary"
-                  title="Cancel and close this form"
                 >
                   Cancel
                 </button>
@@ -1456,7 +1447,6 @@ return { message: 'Script executed successfully', timestamp: utils.now() };`;
                   type="submit" 
                   disabled={loading}
                   className="btn btn-primary"
-                  title={selectedScript ? "Save changes to this script" : "Create new event script"}
                 >
                   {loading ? 'Saving...' : (selectedScript ? 'Update Script' : 'Create Script')}
                 </button>

@@ -45,11 +45,9 @@ An enterprise-grade Node.js application that dynamically exposes MongoDB collect
 - **Schedule Overview**: View all active schedules with next execution times
 - **Flexible Timing**: From every minute to complex yearly schedules
 
-### **Enhanced Documentation & API**
-- **Collection-Specific Swagger Sections**: Each collection gets its own organized section in the API documentation
-- **Interactive OpenAPI Explorer**: Complete API documentation with live testing capabilities
+### **SDK Generation & Documentation**
 - **TypeScript SDK Generation**: Auto-generated type-safe client libraries
-- **Comprehensive Error Handling**: Detailed error responses with proper HTTP status codes
+- **OpenAPI/Swagger Specification**: Complete API documentation with interactive explorer
 - **Schema Discovery**: Intelligent schema inference from existing data
 - **Multi-Language Support**: Ready for SDK generation in any language supporting OpenAPI
 - **Interactive Documentation**: Swagger UI at `/api/sdk/docs` with live API testing
@@ -125,12 +123,9 @@ kubectl apply -f k8s/deployment.yaml
 # Check deployment status
 kubectl get pods -n mongodb-crud
 
-# Add domain to hosts file (for local testing)
-echo "127.0.0.1 crud-api.local" | sudo tee -a /etc/hosts
-
-# Access via ingress (after adding domain to hosts)
-# Frontend: http://crud-api.local
-# API: http://crud-api.local/api/
+# Access via port forwarding
+kubectl port-forward -n mongodb-crud svc/crud-api-service 8080:80
+kubectl port-forward -n mongodb-crud svc/frontend-service 3500:3000
 ```
 ### Access the application
 
@@ -142,28 +137,21 @@ MongoDB: localhost:27017
 Redis: localhost:6379  
 
 #### Kubernetes:
-Frontend: http://crud-api.local (via ingress)  
-API: http://crud-api.local/api/ (via ingress)  
-Cluster Status: http://crud-api.local/api/cluster/status  
-Health Check: http://crud-api.local/health  
-
-**Note**: For production deployment, replace `crud-api.local` with your actual domain name in the ingress configuration.  
+Frontend: http://localhost:3500 (via port-forward)  
+API: http://localhost:8080 (via port-forward)  
+Cluster Status: http://localhost:8080/api/cluster/status  
+Health Check: http://localhost:8080/health  
 
 ### Quick API test
 ```bash
-# Docker Compose - Test load balancer
+# Test load balancer
 curl http://localhost:8080/health
 
-# Kubernetes - Test via ingress
-curl -H "Host: crud-api.local" http://localhost/health
-
-# Test collections (both deployments)
-curl http://localhost:8080/api/management/collections     # Docker Compose
-curl -H "Host: crud-api.local" http://localhost/api/management/collections  # Kubernetes
+# Test collections
+curl http://localhost:8080/api/management/collections
 
 # Test cluster status
-curl http://localhost:8080/api/cluster/status             # Docker Compose
-curl -H "Host: crud-api.local" http://localhost/api/cluster/status          # Kubernetes
+curl http://localhost:8080/api/cluster/status
 ```
 
 ## 📡 API Endpoints
@@ -207,6 +195,14 @@ GET /api/db/users?filter={"status":"active"}
 # Comparison operators  
 GET /api/db/users?filter={"age":{"$gte":18,"$lt":65}}
 
+# Date filtering with ISO date strings
+GET /api/db/products?createdAt={"$lt":"2025-09-14T00:00:00.000Z"}
+GET /api/db/orders?updatedAt={"$gte":"2025-01-01T00:00:00.000Z","$lt":"2025-12-31T23:59:59.999Z"}
+
+# Date comparison operators
+GET /api/db/logs?timestamp={"$gt":"2025-09-10T00:00:00.000Z"}    # After date
+GET /api/db/events?createdAt={"$lte":"2025-09-15T23:59:59.999Z"} # Before or on date
+
 # Array operators
 GET /api/db/products?filter={"category":{"$in":["electronics","books"]}}
 
@@ -219,6 +215,32 @@ GET /api/db/orders?filter={"$and":[{"total":{"$gte":100}},{"status":"pending"}]}
 # Pagination and sorting
 GET /api/db/users?page=2&limit=20&sort=-createdAt
 ```
+
+### **Date Filtering Support**
+Enhanced date filtering capabilities for precise temporal queries:
+
+```bash
+# Date range filtering
+GET /api/db/orders?createdAt={"$gte":"2025-01-01T00:00:00.000Z","$lte":"2025-01-31T23:59:59.999Z"}
+
+# Before/after specific dates
+GET /api/db/logs?timestamp={"$lt":"2025-09-12T00:00:00.000Z"}     # Before date
+GET /api/db/events?scheduledAt={"$gt":"2025-09-15T00:00:00.000Z"} # After date
+
+# Multiple date fields
+GET /api/db/tasks?createdAt={"$gte":"2025-09-01T00:00:00.000Z"}&updatedAt={"$lt":"2025-09-15T00:00:00.000Z"}
+
+# Date filtering with other conditions
+GET /api/db/products?filter={"$and":[{"price":{"$gte":100}},{"createdAt":{"$gte":"2025-09-01T00:00:00.000Z"}}]}
+```
+
+**Supported Date Operators:**
+- `$lt`: Less than (before date)
+- `$lte`: Less than or equal to (before or on date)  
+- `$gt`: Greater than (after date)
+- `$gte`: Greater than or equal to (after or on date)
+
+**Date Format:** Use ISO 8601 format (`YYYY-MM-DDTHH:mm:ss.sssZ`) for all date filtering operations.
 
 ## 📊 **CSV Data Export**
 
@@ -249,8 +271,11 @@ curl "http://localhost:3003/api/db/users?fields=name,email,department&format=csv
 # Export with complex filtering
 curl "http://localhost:3003/api/db/orders?filter={\"total\":{\"$gte\":100}}&format=csv" -o large_orders.csv
 
-# Export with date range
-curl "http://localhost:3003/api/db/logs?createdAt=2024-01-01..2024-12-31&format=csv" -o yearly_logs.csv
+# Export with date filtering  
+curl "http://localhost:3003/api/db/logs?createdAt={\"$gte\":\"2025-01-01T00:00:00.000Z\",\"$lt\":\"2025-12-31T23:59:59.999Z\"}&format=csv" -o yearly_logs.csv
+
+# Export recent records
+curl "http://localhost:3003/api/db/events?updatedAt={\"$gte\":\"2025-09-10T00:00:00.000Z\"}&format=csv" -o recent_events.csv
 ```
 
 ### **CSV Export Features**
@@ -1403,7 +1428,7 @@ MongoCRUD/
 
 ## 🚀 Deployment Options
 
-### **Option 1: Docker Compose (Development & Testing)**
+### **Multi-Instance Production Deployment**
 
 The system supports enterprise-grade horizontal scaling with multiple API instances coordinated through Redis:
 
@@ -1419,74 +1444,7 @@ docker-compose up -d
 # - Redis coordination (port 6379)
 ```
 
-### **Option 2: Kubernetes (Production)**
-
-Production-ready Kubernetes deployment with ingress, auto-scaling, and distributed coordination:
-
-```bash
-# Prerequisites
-# 1. Kubernetes cluster (Docker Desktop, minikube, or cloud provider)
-# 2. Ingress controller (nginx-ingress recommended)
-
-# Install ingress controller (if not present)
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
-
-# Build and deploy
-docker build -t mongodb-crud-api:latest .
-docker build -t mongodb-crud-frontend:latest ./frontend
-kubectl apply -f k8s/deployment.yaml
-
-# Check deployment status
-kubectl get pods -n mongodb-crud
-kubectl get ingress -n mongodb-crud
-
-# For local testing, add domain to hosts file
-echo "127.0.0.1 crud-api.local" | sudo tee -a /etc/hosts
-
-# Access application
-# Frontend: http://crud-api.local
-# API: http://crud-api.local/api/
-```
-
-**Kubernetes Architecture:**
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Kubernetes Cluster                       │
-│                                                             │
-│  ┌─────────────────┐     ┌─────────────────────────────────┐│
-│  │ Ingress         │────▶│         Frontend Pod            ││
-│  │ (nginx)         │     │      (React App)               ││
-│  │ crud-api.local  │     └─────────────────────────────────┘│
-│  │                 │                                        │
-│  │                 │     ┌─────────────────────────────────┐│
-│  │                 │────▶│         API Pods (3x)           ││
-│  │                 │     │   ┌─────┬─────┬─────┐          ││
-│  └─────────────────┘     │   │Pod-1│Pod-2│Pod-3│          ││
-│                          │   └─────┴─────┴─────┘          ││
-│                          │   (Auto-scaling 1-10 pods)     ││
-│                          └─────────────────────────────────┘│
-│                                         │                   │
-│                          ┌─────────────────────────────────┐│
-│                          │         Support Services        ││
-│                          │   ┌─────────┬─────────────┐    ││
-│                          │   │ MongoDB │    Redis    │    ││
-│                          │   │  Pod    │    Pod      │    ││
-│                          │   └─────────┴─────────────┘    ││
-│                          └─────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Kubernetes Features:**
-- **Horizontal Pod Autoscaling**: 1-10 API pods based on CPU/memory usage
-- **Ingress with SSL**: nginx-ingress with TLS termination
-- **Redis Coordination**: Distributed locking and leader election
-- **Service Discovery**: Internal DNS-based service communication
-- **Resource Limits**: CPU/memory limits and requests
-- **Health Checks**: Liveness and readiness probes
-- **Rolling Updates**: Zero-downtime deployments
-- **Persistent Storage**: MongoDB data persistence across restarts
-
-**Production Architecture (Docker Compose):**
+**Production Architecture:**
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │  Frontend :3004 │────│ Load Balancer   │────│   Users/Apps    │
@@ -1520,16 +1478,12 @@ Configure the deployment using environment variables:
 ```bash
 # Database Configuration
 MONGODB_URI=mongodb://mongo:27017/crud_api
-REDIS_URL=redis://redis:6379          # Required for distributed coordination
+REDIS_URL=redis://redis:6379
 
 # Server Configuration
 PORT=3001                              # API instance port
 NODE_ENV=production                    # Environment mode
 CORS_ORIGIN=http://localhost:3004      # Frontend URL
-
-# Redis Configuration (Alternative to REDIS_URL)
-REDIS_HOST=redis                       # Redis host (fallback if REDIS_URL not set)
-REDIS_PORT=6379                        # Redis port (fallback if REDIS_URL not set)
 
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=900000           # 15 minutes
@@ -1543,18 +1497,11 @@ WEBHOOK_BACKOFF_DELAY=30000           # Retry delay (ms)
 # Script Execution
 SCRIPT_TIMEOUT=60000                  # Execution timeout (ms)
 
-# Clustering & Distributed Coordination
+# Clustering
 CLUSTER_ENABLED=true                  # Enable distributed features
-ENABLE_DISTRIBUTED_LOCKING=true       # Enable Redis-based locking (default: true)
 INSTANCE_ID=api-1                     # Unique instance identifier
 CRON_ENABLED=true                     # Enable cron jobs (leader only)
-CRON_LEADER_ELECTION=true             # Enable leader election for cron jobs
 ```
-
-**Important Notes:**
-- **Redis Configuration**: The system now properly uses `REDIS_URL` for connection configuration. This fixes distributed locking issues in Kubernetes deployments.
-- **Distributed Locking**: Essential for multi-instance deployments to prevent duplicate cron job executions.
-- **Leader Election**: Ensures only one instance runs scheduled scripts at a time.
 
 ### **Kubernetes Deployment**
 
@@ -1596,67 +1543,6 @@ kubectl port-forward -n mongodb-crud svc/frontend-service 3000:3000 &
 - ✅ Horizontal Pod Autoscaler functionality
 
 See detailed instructions in [k8s/README.md](k8s/README.md)
-
-### **Troubleshooting Kubernetes Deployment**
-
-**Common Issues and Solutions:**
-
-1. **Redis Connection Errors**
-   ```bash
-   # Symptoms: "Connection is closed" errors in logs
-   # Solution: Ensure REDIS_URL is properly configured
-   kubectl logs deployment/crud-api -n mongodb-crud | grep -i redis
-   
-   # Verify Redis connectivity
-   kubectl exec -n mongodb-crud deployment/crud-api -- node -e "
-   const Redis = require('ioredis');
-   const redis = new Redis(process.env.REDIS_URL);
-   redis.ping().then(console.log).catch(console.error).finally(() => process.exit());
-   "
-   ```
-
-2. **Script Execution Issues**
-   ```bash
-   # Check distributed locking status
-   curl -H "Host: crud-api.local" http://localhost/api/cluster/status
-   
-   # Manual script trigger test
-   curl -H "Host: crud-api.local" -H "Content-Type: application/json" \
-        -X POST http://localhost/api/scripts/scheduled/{script-name}/trigger
-   ```
-
-3. **Pod Startup Issues**
-   ```bash
-   # Check pod logs for startup errors
-   kubectl logs -n mongodb-crud deployment/crud-api --tail=50
-   
-   # Check pod status and events
-   kubectl describe pods -n mongodb-crud
-   ```
-
-4. **Ingress Access Issues**
-   ```bash
-   # Verify ingress controller is running
-   kubectl get pods -n ingress-nginx
-   
-   # Check ingress configuration
-   kubectl get ingress -n mongodb-crud -o yaml
-   
-   # Add domain to hosts file (local testing)
-   echo "127.0.0.1 crud-api.local" | sudo tee -a /etc/hosts
-   ```
-
-5. **Database Connection Issues**
-   ```bash
-   # Check MongoDB connectivity
-   kubectl exec -n mongodb-crud deployment/crud-api -- node -e "
-   const { MongoClient } = require('mongodb');
-   MongoClient.connect(process.env.MONGODB_URI || process.env.MONGODB_CONNECTION_STRING)
-     .then(() => console.log('MongoDB connected'))
-     .catch(console.error)
-     .finally(() => process.exit());
-   "
-   ```
 
 ### **Single Instance Deployment**
 
