@@ -178,6 +178,12 @@ curl http://localhost:8080/api/management/collections | jq
 
 ### Troubleshooting - Common Issues Resolved
 
+**CORS Issues (Fixed):**
+- ✅ Fixed: Frontend CORS configuration for proper API access
+- ✅ Fixed: Added relative API URLs to work with nginx proxy and ingress
+- ✅ Fixed: Enhanced CORS headers for all API endpoints including /health
+- Solution: Use `./test-kubernetes-cors.sh` to verify CORS configuration
+
 **MongoDB Connection Issues:**
 - ✅ Fixed: Updated MongoDB health checks from `mongo` to `mongosh` for v7 compatibility
 - ✅ Fixed: Added authentication credentials to connection string

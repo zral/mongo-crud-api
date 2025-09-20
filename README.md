@@ -1594,6 +1594,25 @@ curl http://localhost:8080/health
 
 ## 🛠️ Troubleshooting
 
+### **Kubernetes CORS Issues (Fixed)**
+
+**Issue**: Frontend cannot access API endpoints in Kubernetes deployment due to CORS errors.
+
+**Solution**: The CORS configuration has been fixed with:
+- Relative API URLs in frontend configuration
+- Enhanced CORS headers for all endpoints
+- Proper ingress configuration with CORS support
+
+**Test CORS Configuration**:
+```bash
+./test-kubernetes-cors.sh
+```
+
+**Access Methods**:
+- **NodePort**: `http://localhost:30080` (default)
+- **Port Forward**: `kubectl port-forward -n mongodb-crud svc/nginx-service 8080:80`
+- **Ingress**: `http://crud-api.local` (requires ingress-nginx controller)
+
 ### **JavaScript Script Execution Issues**
 
 If you encounter errors like `getaddrinfo ENOTFOUND nginx` when JavaScript automation scripts try to make API calls:

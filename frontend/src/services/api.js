@@ -2,8 +2,11 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
+// For relative URLs (when deployed behind proxy), use empty baseURL
+const baseURL = API_BASE_URL === '' ? '' : API_BASE_URL;
+
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
